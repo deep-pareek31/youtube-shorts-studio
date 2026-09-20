@@ -1,17 +1,90 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="100%" height="100%">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4158D0" />
-      <stop offset="46%" stop-color="#C850C0" />
-      <stop offset="100%" stop-color="#FFCC70" />
+    <linearGradient id="skyGrad_init" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#070A1E" />
+      <stop offset="55%" stop-color="#141238" />
+      <stop offset="100%" stop-color="#241B4D" />
     </linearGradient>
+    <radialGradient id="moonGlow_init" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFEFA6" stop-opacity="1" />
+      <stop offset="40%" stop-color="#FFDF00" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#FFDF00" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="pipGlow_init" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF9A6" stop-opacity="1" />
+      <stop offset="30%" stop-color="#FFE033" stop-opacity="0.9" />
+      <stop offset="70%" stop-color="#FFB300" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FFB300" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <rect width="600" height="600" rx="24" fill="url(#bgGrad)" />
-  <rect x="50" y="50" width="500" height="500" rx="16" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-  <circle cx="300" cy="260" r="70" fill="none" stroke="#ffffff" stroke-width="8" />
-  <rect x="230" y="190" width="140" height="140" rx="35" fill="none" stroke="#ffffff" stroke-width="8" />
-  <circle cx="340" cy="220" r="10" fill="#ffffff" />
-  <text x="300" y="400" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle">WORKSPACE FLOW</text>
-  <text x="300" y="440" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" fill="rgba(255,255,255,0.9)" text-anchor="middle">Productivity &amp; Focus Tips</text>
-  <text x="300" y="480" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" fill="rgba(255,255,255,0.75)" text-anchor="middle">AI Visual Post #sample_workspace</text>
+
+  <!-- Night Sky & Background -->
+  <rect width="540" height="960" fill="url(#skyGrad_init)" />
+
+  <!-- Moon with Glow -->
+  <circle cx="430" cy="160" r="90" fill="url(#moonGlow_init)" />
+  <circle cx="430" cy="160" r="42" fill="#FFEFA6" />
+  <circle cx="452" cy="150" r="38" fill="#141238" />
+
+  <!-- Twinkling Stars -->
+  <circle cx="90" cy="120" r="2.5" fill="#FFFFFF" opacity="0.9" />
+  <circle cx="160" cy="200" r="1.8" fill="#FFFFFF" opacity="0.7" />
+  <circle cx="280" cy="140" r="3" fill="#FFF9A6" opacity="0.95" />
+  <circle cx="340" cy="240" r="2" fill="#FFFFFF" opacity="0.8" />
+  <circle cx="70" cy="290" r="2.2" fill="#FFFFFF" opacity="0.85" />
+  <circle cx="210" cy="330" r="2" fill="#FFFFFF" opacity="0.6" />
+  <circle cx="480" cy="310" r="2.5" fill="#FFF9A6" opacity="0.9" />
+
+  <!-- Enchanted Tree Branches -->
+  <path d="M 0,0 Q 120,80 180,60 Q 220,130 300,100" fill="none" stroke="#0D1126" stroke-width="16" stroke-linecap="round" />
+  <path d="M 540,0 Q 420,110 340,90 Q 290,160 210,130" fill="none" stroke="#0D1126" stroke-width="18" stroke-linecap="round" />
+
+  <!-- Rolling Woodland Ground -->
+  <path d="M -20,820 Q 160,760 300,800 Q 450,830 560,780 L 560,960 L -20,960 Z" fill="#0A1C2A" />
+  <path d="M -20,870 Q 200,810 380,850 Q 480,870 560,840 L 560,960 L -20,960 Z" fill="#06121D" />
+
+  <!-- Bioluminescent Mushrooms -->
+  <path d="M 120,840 Q 135,805 150,840 Z" fill="#00E5FF" opacity="0.9" />
+  <rect x="132" y="835" width="6" height="20" fill="#E0F7FA" />
+  <path d="M 410,870 Q 425,835 440,870 Z" fill="#76FF03" opacity="0.9" />
+  <rect x="422" y="865" width="6" height="20" fill="#F1F8E9" />
+
+  <!-- Pip The Firefly Character -->
+  <g transform="translate(270, 480)">
+    <circle cx="0" cy="0" r="110" fill="url(#pipGlow_init)" />
+    <!-- Wings -->
+    <ellipse cx="-28" cy="-24" rx="28" ry="16" fill="rgba(255,255,255,0.7)" transform="rotate(-30 -28 -24)" />
+    <ellipse cx="28" cy="-24" rx="28" ry="16" fill="rgba(255,255,255,0.7)" transform="rotate(30 28 -24)" />
+    <!-- Firefly Body -->
+    <ellipse cx="0" cy="12" rx="20" ry="24" fill="#FFC107" />
+    <circle cx="0" cy="-14" r="16" fill="#5D4037" />
+    <!-- Eyes -->
+    <circle cx="-6" cy="-15" r="4" fill="#FFFFFF" />
+    <circle cx="-5" cy="-15" r="2" fill="#000000" />
+    <circle cx="6" cy="-15" r="4" fill="#FFFFFF" />
+    <circle cx="7" cy="-15" r="2" fill="#000000" />
+    <!-- Smile -->
+    <path d="M -4,-8 Q 0,-4 4,-8" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+    <!-- Antennae -->
+    <path d="M -4,-28 Q -12,-38 -18,-36" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M 4,-28 Q 12,-38 18,-36" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Top Badges -->
+  <g transform="translate(30, 45)">
+    <rect width="180" height="34" rx="8" fill="#FF0000" />
+    <polygon points="18,12 18,22 28,17" fill="#FFFFFF" />
+    <text x="36" y="23" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="800" letter-spacing="1">YOUTUBE SHORTS</text>
+  </g>
+  <g transform="translate(420, 45)">
+    <rect width="90" height="34" rx="8" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+    <text x="45" y="22" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" text-anchor="middle">~45s</text>
+  </g>
+
+  <!-- Bottom Title Card Container -->
+  <rect x="25" y="660" width="490" height="175" rx="20" fill="rgba(11, 14, 26, 0.85)" stroke="rgba(255, 239, 166, 0.4)" stroke-width="2" />
+  <text x="270" y="705" fill="#FFEFA6" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" text-anchor="middle" letter-spacing="2">TINYWONDERTALES ORIGINAL</text>
+  <text x="270" y="745" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="800" text-anchor="middle">The Brave Little Firefly</text>
+  <text x="270" y="775" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" font-weight="700" text-anchor="middle">Who Lost His Light</text>
+  <text x="270" y="812" fill="#76FF03" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="600" text-anchor="middle">★ High Retention AI Animated Short Story</text>
 </svg>

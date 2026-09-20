@@ -1,0 +1,741 @@
+<%- include('partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-magic text-danger me-2"></i>Real AI Video &amp; Shorts Studio
+        </h2>
+        <p class="text-muted mb-0">
+            Generate, animate, preview in 9:16 vertical player with voiceover &amp; karaoke subtitles, and export real video files (.webm / .mp4).
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/all_posts" class="btn btn-outline-secondary">
+            <i class="bi bi-collection-play me-1"></i> View Video Queue
+        </a>
+        <a href="/trending" class="btn btn-outline-danger">
+            <i class="bi bi-fire me-1"></i> Scan Viral Outliers
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT PANEL: Creation Controls & AI Generator -->
+    <div class="col-lg-5">
+        <div class="yt-card p-4 mb-4">
+            <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                <i class="bi bi-sliders text-primary me-2"></i>1. Configure AI Short Parameters
+            </h5>
+
+            <!-- Reference YouTube Video Link Input (oEmbed + Gemini 3.8 Flash) -->
+            <div class="p-3 mb-3 rounded-3 border bg-light-subtle border-primary-subtle">
+                <label class="form-label fw-bold small text-dark d-flex align-items-center justify-content-between mb-1">
+                    <span><i class="bi bi-link-45deg text-danger me-1"></i> Paste Reference YouTube Video Link:</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger small">Gemini 3.8 Analysis</span>
+                </label>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="url" id="referenceVideoUrlInput" class="form-control" placeholder="https://www.youtube.com/watch?v=... or shorts/..." value="">
+                    <button type="button" class="btn btn-outline-danger fw-bold" id="analyzeRefBtn" onclick="analyzeReferenceVideoUrl()">
+                        <i class="bi bi-magic me-1"></i> Analyze &amp; Mirror
+                    </button>
+                </div>
+                <div id="refVideoPreviewCard" class="d-none p-2 rounded bg-white border mt-2">
+                    <div class="d-flex gap-2 align-items-center">
+                        <img id="refVideoThumb" src="" alt="Thumb" class="rounded" style="width: 70px; height: 48px; object-fit: cover;">
+                        <div class="flex-grow-1 overflow-hidden">
+                            <h6 id="refVideoTitle" class="small fw-bold mb-0 text-truncate text-dark">Reference Title</h6>
+                            <small id="refVideoAuthor" class="text-muted d-block" style="font-size: 0.72rem;">Creator • 1.2M views</small>
+                            <span id="refHookBadge" class="badge bg-success-subtle text-success border border-success" style="font-size: 0.65rem;">Hook Matched</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="shortGeneratorForm" onsubmit="event.preventDefault(); handleGenerateShort();">
+                <!-- Target Channel -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Target YouTube Channel:</label>
+                    <select id="targetChannelSelect" class="form-select" onchange="onChannelChange()">
+                        <option value="tiinywondertales" data-id="1" data-name="TinyWonderTales" selected>
+                            TinyWonderTales (@tiinywondertales) • Kids &amp; Bedtime Tales
+                        </option>
+                        <option value="thedailyE-shorts" data-id="2" data-name="The Daily Shorts dot com">
+                            The Daily Shorts dot com (@thedailyE-shorts) • Relatable Comedy &amp; Skits
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Instant Viral Topic Presets -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary d-flex justify-content-between">
+                        <span>Instant Viral Hook Ideas:</span>
+                        <span class="text-primary small" style="cursor: pointer;" onclick="shufflePresets()"><i class="bi bi-arrow-clockwise"></i> Shuffle</span>
+                    </label>
+                    <div id="presetsContainer" class="d-flex flex-wrap gap-1">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Topic / Theme Input -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Short Story / Skit Topic:</label>
+                    <textarea id="topicInput" class="form-control" rows="3" placeholder="e.g. Pip the firefly loses his glow in the Whispering Woods, but discovers kindness brings it back"></textarea>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold small text-secondary">Target Duration:</label>
+                        <select id="durationSelect" class="form-select form-select-sm">
+                            <option value="25">25 Seconds (Ultra Viral)</option>
+                            <option value="30" selected>30 Seconds (Standard Short)</option>
+                            <option value="45">45 Seconds (Deep Story)</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold small text-secondary">Studio AI Voice (Gemini TTS):</label>
+                        <div class="input-group input-group-sm">
+                            <select id="voiceStyleSelect" class="form-select form-select-sm">
+                                <option value="soothing_storyteller" data-voice="Kore" selected>Kore (Soothing Bedtime)</option>
+                                <option value="charon" data-voice="Charon">Charon (Deep Calming Whispers)</option>
+                                <option value="punchy_comedic" data-voice="Zephyr">Zephyr (Smooth &amp; Natural)</option>
+                                <option value="puck" data-voice="Puck">Puck (Punchy Comedic Timing)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-secondary" id="previewVoiceBtn" onclick="testCurrentVoice()" title="Listen to AI voice sample">
+                                <i class="bi bi-volume-up"></i> Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-secondary">Visual Lighting &amp; Art Aesthetic:</label>
+                    <select id="visualStyleSelect" class="form-select form-select-sm">
+                        <option value="bioluminescent_forest" selected>Bioluminescent Enchanted Forest (Glowing Fireflies, Moss, Moon)</option>
+                        <option value="comic_pop_studio">Vibrant Studio Pop Art (Bold Halftones, Sunburst Rays, Phone Alert)</option>
+                        <option value="cinematic_rembrandt">Cinematic Rembrandt (Moody dark teal &amp; warm tungsten)</option>
+                    </select>
+                </div>
+
+                <button id="generateShortBtn" type="submit" class="btn btn-yt-red w-100 py-2 fw-bold fs-6 shadow-sm">
+                    <i class="bi bi-stars me-1"></i> Generate &amp; Render Real AI Short
+                </button>
+            </form>
+        </div>
+
+        <!-- Video Metadata & YouTube Optimization Details -->
+        <div class="yt-card p-4">
+            <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                <i class="bi bi-youtube text-danger me-2"></i>2. YouTube Algorithm Metadata
+            </h5>
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-muted mb-0">Short Title:</label>
+                <input type="text" id="metaShortTitle" class="form-control form-control-sm fw-bold text-dark" value="Pip The Firefly Who Lost His Light">
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-muted mb-0">YouTube Description &amp; Timestamps:</label>
+                <textarea id="metaShortDesc" class="form-control form-control-sm" rows="3">Pip the tiny firefly thinks he has lost his glow, until he helps a lost forest friend in the dark! ✨ Bedtime story on kindness. #tiinywondertales</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted mb-0">Hashtags:</label>
+                <input type="text" id="metaShortTags" class="form-control form-control-sm text-primary" value="#shorts #tiinywondertales #kidsstories #bedtimestory #animation">
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-dark flex-fill" onclick="copyYouTubeMetadata()">
+                    <i class="bi bi-clipboard-check me-1"></i> Copy Metadata
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger flex-fill" onclick="openYouTubeStudioUpload()">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> YouTube Studio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: 9:16 Interactive Canvas Video Player & Studio Stage -->
+    <div class="col-lg-7">
+        <div class="yt-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger px-2 py-1"><i class="bi bi-record-circle-fill me-1"></i> 60 FPS REAL RENDER</span>
+                    <span id="currentSceneBadge" class="badge bg-dark">Scene 1 of 3</span>
+                    <span id="playerViralBadge" class="badge bg-success-subtle text-success border border-success fw-bold">Viral Potential: 95%</span>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="subtitlesToggle" checked onchange="toggleSubtitles()">
+                    <label class="form-check-label small fw-bold" for="subtitlesToggle">Karaoke Subtitles</label>
+                </div>
+            </div>
+
+            <!-- 9:16 Canvas Video Stage Container -->
+            <div class="d-flex justify-content-center bg-dark rounded-4 p-3 mb-3 shadow-inner" style="background: radial-gradient(circle, #1F2430 0%, #0B0E14 100%);">
+                <div class="shorts-preview-frame" style="max-width: 320px; width: 100%; border: 3px solid rgba(255,255,255,0.15); position: relative; border-radius: 16px; overflow: hidden;">
+                    <canvas id="shortsCanvas" width="540" height="960" style="width: 100%; height: 100%; display: block; object-fit: contain; cursor: pointer;" onclick="togglePlayPause()"></canvas>
+                    
+                    <!-- Floating Big Play Overlay Indicator (hidden while playing) -->
+                    <div id="canvasPlayOverlay" class="position-absolute top-50 start-50 translate-middle pointer-events-none" style="display: flex; justify-content: center; align-items: center; width: 64px; height: 64px; background: rgba(0,0,0,0.6); border-radius: 50%; color: white; font-size: 28px; cursor: pointer;" onclick="togglePlayPause()">
+                        <i id="canvasPlayIcon" class="bi bi-play-fill" style="margin-left: 4px;"></i>
+                    </div>
+
+                    <!-- Live Export Progress Overlay -->
+                    <div id="exportProgressOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column justify-content-center align-items-center p-4" style="background: rgba(0,0,0,0.85); z-index: 20; color: white;">
+                        <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                        <h6 class="fw-bold text-center mb-2" id="exportStatusText">Rendering Video Frames...</h6>
+                        <div class="progress w-100 mb-2" style="height: 10px;">
+                            <div id="exportProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 10%"></div>
+                        </div>
+                        <small class="text-secondary text-center" id="exportPercentText">10% Complete • Encoding WebM/MP4 stream</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playback Scrubber & Controls -->
+            <div class="mb-3 px-2">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span id="timeCurrentText" class="small font-monospace fw-bold text-dark">00:00</span>
+                    <input type="range" id="videoTimelineScrubber" class="form-range flex-grow-1" min="0" max="30" step="0.1" value="0" oninput="onTimelineScrub(this.value)">
+                    <span id="timeTotalText" class="small font-monospace text-muted">00:30</span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex gap-2">
+                        <button id="playPauseBtn" class="btn btn-dark btn-sm px-3 fw-bold" onclick="togglePlayPause()">
+                            <i id="playPauseIcon" class="bi bi-play-fill me-1"></i> Play
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="restartVideo()" title="Restart from 00:00">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button id="muteBtn" class="btn btn-outline-secondary btn-sm" onclick="toggleMute()" title="Mute Audio">
+                            <i id="muteIcon" class="bi bi-volume-up-fill"></i>
+                        </button>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button id="exportVideoBtn" class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="exportRealVideoFile()">
+                            <i class="bi bi-download me-1"></i> Download Real Video (.webm / .mp4)
+                        </button>
+                        <button class="btn btn-primary btn-sm fw-bold" onclick="scheduleThisShort()">
+                            <i class="bi bi-calendar-plus me-1"></i> Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene-By-Scene Breakdown & Script Inspection -->
+            <div class="mt-4 pt-3 border-top">
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-film text-danger me-1"></i> Storyboard &amp; Scene Narration Script
+                </h6>
+                <div id="storyboardContainer" class="d-flex flex-column gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load the Real Video Engine -->
+<script src="/js/shorts-player.js"></script>
+
+<script>
+let currentVideoData = {
+    title: "Pip The Brave Firefly Who Lost His Light",
+    theme: "The Brave Little Firefly Who Lost His Light",
+    channel_handle: "@tiinywondertales",
+    duration_seconds: 30,
+    viral_score: 95,
+    description: "Pip was the tiniest firefly in Whispering Woods, and tonight his light would not turn on. But when Barnaby the bunny got lost, Pip learned kindness is the brightest glow! ✨ #shorts #tiinywondertales",
+    hashtags: "#shorts #tiinywondertales #kidsstories #bedtimestory #animation",
+    scenes: [
+        {
+            scene_number: 1,
+            start_sec: 0,
+            end_sec: 10,
+            visual_type: "bioluminescent_forest",
+            visual_prompt: "Pip sitting on mossy branch looking sad, dark enchanted twilight forest, soft glowing mushrooms",
+            narration: "Pip was the tiniest firefly in the Whispering Woods, and tonight... his glowing light would not turn on.",
+            sound_effect: "chime",
+            camera: "zoom_in"
+        },
+        {
+            scene_number: 2,
+            start_sec: 10,
+            end_sec: 20,
+            visual_type: "bioluminescent_forest",
+            visual_prompt: "Barnaby the little rabbit crying in the dark thicket, crying for help",
+            narration: "Suddenly, through the deep shadows, a little rabbit whimpered. Barnaby was lost, all alone in the dark.",
+            sound_effect: "whoosh",
+            camera: "pan_right"
+        },
+        {
+            scene_number: 3,
+            start_sec: 20,
+            end_sec: 30,
+            visual_type: "bioluminescent_forest",
+            visual_prompt: "Pip reaching out to hug Barnaby, Pip's golden abdomen bursting with warm radiant light, lighting the whole path",
+            narration: "Pip hugged his friend tight. In that moment of pure kindness, his golden glow sparked brighter than any star!",
+            sound_effect: "sparkle",
+            camera: "pulse"
+        }
+    ]
+};
+
+const presets = {
+    tiinywondertales: [
+        "Pip and the Whispering Willows",
+        "The Sleepy Bear who lost his favorite blanket",
+        "The Tiny Star that fell from the night sky",
+        "Barnaby Bunny and the Secret Clover Garden",
+        "The Brave Owl who was afraid of the dark"
+    ],
+    "thedailyE-shorts": [
+        "When you agree to plans 3 weeks in advance",
+        "Why cats stare at empty walls at 3 AM",
+        "Looking at your bank balance on Sunday night",
+        "When you tell your mom you'll be home in 5 minutes",
+        "Trying to remember someone's name 2 seconds after they said it"
+    ]
+};
+
+let engine = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    engine = new ShortsVideoEngine('shortsCanvas', {
+        width: 540,
+        height: 960,
+        onTimeUpdate: (time, duration) => {
+            const scrubber = document.getElementById('videoTimelineScrubber');
+            if (scrubber) {
+                scrubber.value = time;
+                scrubber.max = duration;
+            }
+            const timeCurr = document.getElementById('timeCurrentText');
+            if (timeCurr) timeCurr.textContent = formatSec(time);
+        },
+        onSceneChange: (sceneIndex, scene) => {
+            const badge = document.getElementById('currentSceneBadge');
+            if (badge && currentVideoData.scenes) {
+                badge.textContent = `Scene ${sceneIndex + 1} of ${currentVideoData.scenes.length}`;
+            }
+            highlightStoryboardScene(sceneIndex);
+        },
+        onEnded: () => {
+            updatePlayPauseButtonState(false);
+        }
+    });
+
+    onChannelChange();
+    loadCurrentVideoIntoUI();
+});
+
+function formatSec(seconds) {
+    const s = Math.floor(seconds || 0);
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
+}
+
+function onChannelChange() {
+    const select = document.getElementById('targetChannelSelect');
+    const ch = select.value;
+    const visualSelect = document.getElementById('visualStyleSelect');
+    const voiceSelect = document.getElementById('voiceStyleSelect');
+
+    if (ch === 'tiinywondertales') {
+        visualSelect.value = 'bioluminescent_forest';
+        voiceSelect.value = 'soothing_storyteller';
+        document.getElementById('topicInput').value = "Pip the brave firefly helps a lost bunny find his way through the Whispering Woods.";
+    } else {
+        visualSelect.value = 'comic_pop_studio';
+        voiceSelect.value = 'punchy_comedic';
+        document.getElementById('topicInput').value = "When you agree to plans 3 weeks in advance and the calendar reminder goes off.";
+    }
+
+    renderPresets(ch);
+}
+
+function renderPresets(ch) {
+    const container = document.getElementById('presetsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    const list = presets[ch] || presets.tiinywondertales;
+    list.slice(0, 4).forEach(idea => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'btn btn-outline-secondary btn-sm text-start py-1 px-2 mb-1';
+        chip.style.fontSize = '0.78rem';
+        chip.innerHTML = `<i class="bi bi-lightbulb me-1 text-warning"></i>${idea}`;
+        chip.onclick = () => {
+            document.getElementById('topicInput').value = idea;
+        };
+        container.appendChild(chip);
+    });
+}
+
+function shufflePresets() {
+    const ch = document.getElementById('targetChannelSelect').value;
+    if (presets[ch]) {
+        presets[ch].sort(() => Math.random() - 0.5);
+        renderPresets(ch);
+    }
+}
+
+function loadCurrentVideoIntoUI() {
+    if (!engine) return;
+    engine.loadVideoData(currentVideoData);
+
+    document.getElementById('timeTotalText').textContent = formatSec(currentVideoData.duration_seconds);
+    document.getElementById('videoTimelineScrubber').max = currentVideoData.duration_seconds;
+    document.getElementById('metaShortTitle').value = currentVideoData.title;
+    document.getElementById('metaShortDesc').value = currentVideoData.description;
+    document.getElementById('metaShortTags').value = currentVideoData.hashtags;
+    document.getElementById('playerViralBadge').textContent = `Viral Potential: ${currentVideoData.viral_score || 95}%`;
+
+    renderStoryboard();
+}
+
+function renderStoryboard() {
+    const container = document.getElementById('storyboardContainer');
+    if (!container || !currentVideoData.scenes) return;
+
+    container.innerHTML = '';
+    currentVideoData.scenes.forEach((sc, idx) => {
+        const item = document.createElement('div');
+        item.id = `storyboard-scene-${idx}`;
+        item.className = 'p-3 rounded border bg-light d-flex gap-3 align-items-start';
+        item.style.cursor = 'pointer';
+        item.onclick = () => {
+            if (engine) engine.seek(sc.start_sec);
+        };
+
+        const audioBadge = sc.audio_url 
+            ? `<button class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" style="font-size: 0.72rem;" onclick="event.stopPropagation(); playSceneVoice('${sc.audio_url}')"><i class="bi bi-play-circle-fill me-1"></i>Play AI Voice</button>`
+            : `<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">TTS Audio Ready</span>`;
+
+        item.innerHTML = `
+            <div class="badge bg-secondary py-2 px-2 text-center" style="min-width: 65px;">
+                <div class="fw-bold fs-6">S${idx + 1}</div>
+                <small style="font-size: 0.65rem;">${formatSec(sc.start_sec)}-${formatSec(sc.end_sec)}</small>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                    <span class="fw-bold small text-dark"><i class="bi bi-camera-reels me-1 text-primary"></i> ${sc.visual_type}</span>
+                    <div class="d-flex align-items-center gap-1">
+                        ${audioBadge}
+                        <span class="badge bg-info-subtle text-info border">${sc.sound_effect || 'sparkle'} FX</span>
+                    </div>
+                </div>
+                <p class="mb-1 small text-secondary fst-italic">"${sc.narration}"</p>
+                <small class="text-muted d-block" style="font-size: 0.72rem;"><strong>Art Prompt:</strong> ${sc.visual_prompt}</small>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+let sceneAudioPlayer = null;
+function playSceneVoice(url) {
+    if (sceneAudioPlayer) {
+        sceneAudioPlayer.pause();
+    }
+    sceneAudioPlayer = new Audio(url);
+    sceneAudioPlayer.play().catch(e => console.warn('Audio play notice:', e));
+}
+
+function highlightStoryboardScene(activeIdx) {
+    if (!currentVideoData.scenes) return;
+    currentVideoData.scenes.forEach((_, idx) => {
+        const el = document.getElementById(`storyboard-scene-${idx}`);
+        if (el) {
+            if (idx === activeIdx) {
+                el.className = 'p-3 rounded border border-2 border-danger bg-danger-subtle d-flex gap-3 align-items-start';
+            } else {
+                el.className = 'p-3 rounded border bg-light d-flex gap-3 align-items-start';
+            }
+        }
+    });
+}
+
+function togglePlayPause() {
+    if (!engine) return;
+    const isPlaying = engine.togglePlay();
+    updatePlayPauseButtonState(isPlaying);
+}
+
+function updatePlayPauseButtonState(isPlaying) {
+    const btn = document.getElementById('playPauseBtn');
+    const overlay = document.getElementById('canvasPlayOverlay');
+    const overlayIcon = document.getElementById('canvasPlayIcon');
+
+    if (isPlaying) {
+        if (btn) btn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
+        if (overlay) overlay.style.display = 'none';
+    } else {
+        if (btn) btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Play';
+        if (overlay) overlay.style.display = 'flex';
+        if (overlayIcon) overlayIcon.className = 'bi bi-play-fill';
+    }
+}
+
+function restartVideo() {
+    if (!engine) return;
+    engine.seek(0);
+    engine.play();
+    updatePlayPauseButtonState(true);
+}
+
+function toggleMute() {
+    if (!engine) return;
+    const muted = engine.toggleMute();
+    const icon = document.getElementById('muteIcon');
+    if (icon) {
+        icon.className = muted ? 'bi bi-volume-mute-fill text-danger' : 'bi bi-volume-up-fill';
+    }
+}
+
+function onTimelineScrub(val) {
+    if (!engine) return;
+    engine.seek(parseFloat(val));
+}
+
+function toggleSubtitles() {
+    // Handled directly inside engine canvas renderer
+}
+
+// ==========================================
+// Reference YouTube Video Analysis
+// ==========================================
+async function analyzeReferenceVideoUrl() {
+    const input = document.getElementById('referenceVideoUrlInput');
+    const btn = document.getElementById('analyzeRefBtn');
+    const url = input.value.trim();
+
+    if (!url) {
+        alert('Please paste a valid YouTube video link (e.g. https://www.youtube.com/watch?v=... or https://youtube.com/shorts/...)');
+        input.focus();
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Analyzing Video...';
+
+    try {
+        const resp = await fetch('/api/analyze-reference-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_url: url })
+        });
+
+        const data = await resp.json();
+        if (data.success && data.data) {
+            const vid = data.data.video;
+            const analysis = data.data.analysis;
+
+            // Show preview card
+            const card = document.getElementById('refVideoPreviewCard');
+            card.classList.remove('d-none');
+            document.getElementById('refVideoThumb').src = vid.thumbnail_url;
+            document.getElementById('refVideoTitle').textContent = vid.title;
+            document.getElementById('refVideoAuthor').textContent = `${vid.author_name} • ${vid.views || 'Viral'}`;
+            document.getElementById('refHookBadge').textContent = analysis.recommended_voice_tone || 'Hook Analyzed';
+
+            // Auto-populate generator inputs with the matched winning strategy
+            if (analysis.short_topic) {
+                document.getElementById('topicInput').value = analysis.short_topic;
+            }
+            if (analysis.short_title) {
+                document.getElementById('metaShortTitle').value = analysis.short_title;
+            }
+            if (analysis.suggested_narration_sample) {
+                document.getElementById('metaShortDesc').value = `${analysis.suggested_narration_sample}\n\nInspired by ${vid.title}. #shorts`;
+            }
+
+            // Adjust channel and voice tone
+            if (analysis.target_channel === '@tiinywondertales') {
+                document.getElementById('targetChannelSelect').value = 'tiinywondertales';
+                document.getElementById('visualStyleSelect').value = 'bioluminescent_forest';
+                document.getElementById('voiceStyleSelect').value = 'soothing_storyteller';
+            } else {
+                document.getElementById('targetChannelSelect').value = 'thedailyE-shorts';
+                document.getElementById('visualStyleSelect').value = 'comic_pop_studio';
+                document.getElementById('voiceStyleSelect').value = 'punchy_comedic';
+            }
+
+            alert(`✅ Reference video "${vid.title.slice(0, 45)}..." analyzed successfully!\n\nFormula mirrored: ${analysis.hook_analysis}\nTopic & voice calibrated. Click "Generate & Render Real AI Short" to produce!`);
+        } else {
+            alert(data.error || 'Could not analyze reference video. Please check the URL.');
+        }
+    } catch (e) {
+        console.error('Analysis error:', e);
+        alert('Network error while analyzing reference video.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-magic me-1"></i> Analyze &amp; Mirror';
+    }
+}
+
+// ==========================================
+// Test Current AI Voice (Gemini TTS)
+// ==========================================
+let sampleAudioEl = null;
+async function testCurrentVoice() {
+    const voiceSelect = document.getElementById('voiceStyleSelect');
+    const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+    const voiceName = selectedOption.getAttribute('data-voice') || 'Kore';
+    const isKids = voiceSelect.value === 'soothing_storyteller' || voiceSelect.value === 'charon';
+    const sampleText = isKids
+        ? "Close your eyes, little adventurer. Deep inside the Whispering Woods, a gentle glowing light is watching over your dreams."
+        : "That exact split-second when you realize you replied all on an email you definitely shouldn't have!";
+
+    const btn = document.getElementById('previewVoiceBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const resp = await fetch('/api/generate-ai-voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: sampleText,
+                voice_name: voiceName,
+                style_prompt: isKids
+                    ? 'Speak in an ultra-calm, gentle, soothing bedtime storyteller cadence'
+                    : 'Speak with funny, energetic comedic timing',
+            })
+        });
+
+        const data = await resp.json();
+        if (data.success && data.audio_url) {
+            if (sampleAudioEl) sampleAudioEl.pause();
+            sampleAudioEl = new Audio(data.audio_url);
+            sampleAudioEl.play();
+        } else {
+            alert(data.error || 'Could not generate voice sample.');
+        }
+    } catch (e) {
+        alert('Voice test error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-volume-up"></i> Test';
+    }
+}
+
+// ==========================================
+// Real AI Generation Call
+// ==========================================
+async function handleGenerateShort() {
+    const btn = document.getElementById('generateShortBtn');
+    const topic = document.getElementById('topicInput').value.trim();
+    const channelSelect = document.getElementById('targetChannelSelect');
+    const channelHandle = channelSelect.value === 'tiinywondertales' ? '@tiinywondertales' : '@thedailyE-shorts';
+    const channelId = channelSelect.options[channelSelect.selectedIndex].getAttribute('data-id');
+    const duration = parseInt(document.getElementById('durationSelect').value, 10) || 30;
+    const visualStyle = document.getElementById('visualStyleSelect').value;
+    const voiceStyle = document.getElementById('voiceStyleSelect').value;
+
+    if (!topic) {
+        alert('Please enter a topic or select one of the viral hook presets above.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating Scenes & Real AI Voiceovers...';
+
+    try {
+        const resp = await fetch('/api/generate-ai-short', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                topic,
+                channelHandle,
+                channelId,
+                duration,
+                visualStyle,
+                voiceStyle
+            })
+        });
+
+        const data = await resp.json();
+        const newVideo = data.video || data.shortData;
+        if (data.success && newVideo) {
+            currentVideoData = newVideo;
+            loadCurrentVideoIntoUI();
+            restartVideo();
+        } else {
+            alert(data.error || 'Could not generate Short. Please retry.');
+        }
+    } catch (e) {
+        console.error('Generation error:', e);
+        alert('Network error while generating short. Check server status.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generate &amp; Render Real AI Short';
+    }
+}
+
+// ==========================================
+// Real Video Export (WebM / MP4)
+// ==========================================
+async function exportRealVideoFile() {
+    if (!engine) return;
+    const btn = document.getElementById('exportVideoBtn');
+    const overlay = document.getElementById('exportProgressOverlay');
+    const statusText = document.getElementById('exportStatusText');
+    const progressBar = document.getElementById('exportProgressBar');
+    const percentText = document.getElementById('exportPercentText');
+
+    btn.disabled = true;
+    overlay.classList.remove('d-none');
+    overlay.classList.add('d-flex');
+
+    try {
+        await engine.exportVideoAsFile(({ percent, status }) => {
+            progressBar.style.width = `${percent}%`;
+            statusText.textContent = status;
+            percentText.textContent = `${percent}% Complete • Capturing 60 FPS stream`;
+        });
+    } catch (e) {
+        alert('Export error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            overlay.classList.remove('d-flex');
+            overlay.classList.add('d-none');
+        }, 1200);
+    }
+}
+
+function copyYouTubeMetadata() {
+    const title = document.getElementById('metaShortTitle').value;
+    const desc = document.getElementById('metaShortDesc').value;
+    const tags = document.getElementById('metaShortTags').value;
+    const textToCopy = `TITLE:\n${title}\n\nDESCRIPTION:\n${desc}\n\nTAGS:\n${tags}`;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert('✅ YouTube Title, Description & Tags copied to your clipboard!');
+    }).catch(() => {
+        alert('Failed to copy. Please copy manually.');
+    });
+}
+
+function openYouTubeStudioUpload() {
+    copyYouTubeMetadata();
+    window.open('https://studio.youtube.com/', '_blank');
+}
+
+function scheduleThisShort() {
+    // Send to server to create post
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/create-short/confirm';
+
+    const inputData = document.createElement('input');
+    inputData.type = 'hidden';
+    inputData.name = 'short_data_json';
+    inputData.value = JSON.stringify(currentVideoData);
+    form.appendChild(inputData);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+
+<%- include('partials/footer') %>

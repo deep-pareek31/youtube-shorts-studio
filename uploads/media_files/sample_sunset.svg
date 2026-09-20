@@ -1,17 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="100%" height="100%">
   <defs>
-    <linearGradient id="sunsetGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#FF512F" />
-      <stop offset="50%" stop-color="#DD2476" />
-      <stop offset="100%" stop-color="#1B1464" />
+    <linearGradient id="bgGrad_sunset" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF0844" />
+      <stop offset="50%" stop-color="#FF4E50" />
+      <stop offset="100%" stop-color="#F9D423" />
     </linearGradient>
+    <pattern id="dots_sunset" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="2.5" fill="rgba(255,255,255,0.18)" />
+    </pattern>
   </defs>
-  <rect width="600" height="600" rx="24" fill="url(#sunsetGrad)" />
-  <circle cx="300" cy="240" r="80" fill="#FFEAA7" opacity="0.9" />
-  <polygon points="120,420 300,280 480,420" fill="#2C3E50" opacity="0.6"/>
-  <polygon points="220,440 380,320 540,440" fill="#1A1A24" opacity="0.8"/>
-  <rect x="0" y="420" width="600" height="180" fill="#0c0728" opacity="0.95" />
-  <text x="300" y="490" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle">CINEMATIC SUNSET REEL</text>
-  <text x="300" y="525" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" fill="rgba(255,255,255,0.85)" text-anchor="middle">Golden Hour Coastal Travel ~30s</text>
-  <text x="300" y="560" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle">Curated Video Source: @travelgram</text>
+
+  <!-- Background -->
+  <rect width="540" height="960" fill="url(#bgGrad_sunset)" />
+  <rect width="540" height="960" fill="url(#dots_sunset)" />
+
+  <!-- Pop Visual Graphics -->
+  <circle cx="270" cy="400" r="150" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.35)" stroke-width="4" />
+  
+  <!-- Smartphone Alarm / Calendar Pop Skit Graphic -->
+  <g transform="translate(190, 270)">
+    <rect width="160" height="260" rx="24" fill="#111827" stroke="#FFFFFF" stroke-width="5" />
+    <rect x="50" y="10" width="60" height="6" rx="3" fill="#374151" />
+    <rect x="15" y="35" width="130" height="190" rx="12" fill="#1F2937" />
+    
+    <!-- Red Alarm Banner -->
+    <rect x="25" y="55" width="110" height="70" rx="8" fill="#DC2626" />
+    <text x="80" y="80" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="900" text-anchor="middle">URGENT ALARM</text>
+    <text x="80" y="105" fill="#FEF08A" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="20" font-weight="900" text-anchor="middle">SATURDAY</text>
+
+    <!-- Comic Panic Face -->
+    <circle cx="80" cy="175" r="30" fill="#FACC15" />
+    <circle cx="70" cy="168" r="4" fill="#000000" />
+    <circle cx="90" cy="168" r="4" fill="#000000" />
+    <ellipse cx="80" cy="188" rx="10" ry="12" fill="#78350F" />
+  </g>
+
+  <!-- Top Badges -->
+  <g transform="translate(30, 45)">
+    <rect width="180" height="34" rx="8" fill="#000000" stroke="#FFFFFF" stroke-width="1.5" />
+    <polygon points="18,12 18,22 28,17" fill="#FF0000" />
+    <text x="36" y="23" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="800" letter-spacing="1">YOUTUBE SHORTS</text>
+  </g>
+  <g transform="translate(400, 45)">
+    <rect width="110" height="34" rx="8" fill="#10B981" />
+    <text x="55" y="22" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="800" text-anchor="middle">VIRAL 96%</text>
+  </g>
+
+  <!-- Bottom Title Box -->
+  <rect x="25" y="640" width="490" height="195" rx="20" fill="rgba(0, 0, 0, 0.88)" stroke="rgba(255, 255, 255, 0.3)" stroke-width="2" />
+  <text x="270" y="680" fill="#FACC15" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="900" text-anchor="middle" letter-spacing="2">THE DAILY SHORTS • RELATABLE SKIT</text>
+  <text x="270" y="718" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="20" font-weight="900" text-anchor="middle">When you accidentally agree</text>
+  <text x="270" y="748" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="20" font-weight="900" text-anchor="middle">to plans 3 weeks in advance 😂</text>
+  <text x="270" y="788" fill="#38BDF8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="700" text-anchor="middle">⚡ Ultra Fast-Paced Kinetic Narration (~36s)</text>
 </svg>

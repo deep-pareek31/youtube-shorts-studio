@@ -16,12 +16,43 @@
             <div class="row g-4">
                 <div class="col-md-5 text-center">
                     <div id="previewBadgeType" class="mb-2"></div>
-                    <div id="previewMediaContainer" class="shorts-preview-frame mx-auto mb-3" style="max-width: 240px; min-height: 380px; position: relative;">
-                        <img id="previewImage" src="" alt="preview" style="width: 100%; height: 100%; object-fit: cover;">
-                        <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-dark bg-opacity-75 text-start" style="font-size: 11px;">
-                            <span id="previewOverlaySubtitles">Auto-synced captions</span>
+                    <div class="shorts-preview-frame mx-auto mb-2" style="max-width: 250px; aspect-ratio: 9/16; position: relative; background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
+                        <canvas id="modalShortsCanvas" width="540" height="960" style="width: 100%; height: 100%; object-fit: contain; cursor: pointer;" onclick="modalTogglePlay()"></canvas>
+                        
+                        <!-- Big Play Icon Overlay -->
+                        <div id="modalCanvasPlayOverlay" class="position-absolute top-50 start-50 translate-middle pointer-events-none" style="display: flex; justify-content: center; align-items: center; width: 56px; height: 56px; background: rgba(0,0,0,0.6); border-radius: 50%; color: white; font-size: 24px; cursor: pointer;" onclick="modalTogglePlay()">
+                            <i id="modalCanvasPlayIcon" class="bi bi-play-fill" style="margin-left: 3px;"></i>
+                        </div>
+
+                        <!-- Export Progress Overlay -->
+                        <div id="modalExportOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column justify-content-center align-items-center p-3 text-center" style="background: rgba(0,0,0,0.88); z-index: 10; color: white;">
+                            <div class="spinner-border text-danger mb-2" role="status" style="width: 2rem; height: 2rem;"></div>
+                            <div class="small fw-bold mb-1" id="modalExportStatus">Rendering 60 FPS Video...</div>
+                            <div class="progress w-100 mb-1" style="height: 6px;">
+                                <div id="modalExportProgressBar" class="progress-bar bg-danger" style="width: 10%;"></div>
+                            </div>
+                            <small class="text-secondary" style="font-size: 10px;" id="modalExportPercent">10%</small>
                         </div>
                     </div>
+
+                    <!-- Mini player scrubber & controls under canvas -->
+                    <div class="d-flex align-items-center gap-1 justify-content-center mb-2 px-1">
+                        <button type="button" class="btn btn-sm btn-dark py-0 px-2 fw-bold" onclick="modalTogglePlay()">
+                            <i id="modalPlayBtnIcon" class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="modalRestart()">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="modalToggleMute()">
+                            <i id="modalMuteBtnIcon" class="bi bi-volume-up-fill"></i>
+                        </button>
+                        <span id="modalTimeDisplay" class="font-monospace small text-muted ms-1" style="font-size: 11px;">00:00 / 00:30</span>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 mb-2" onclick="modalExportVideo()">
+                        <i class="bi bi-download me-1"></i> Export Real Video (.webm)
+                    </button>
+
                     <div class="p-2 bg-light rounded text-start small border">
                         <div><strong>Target Channel:</strong> <span id="previewTargetAccountModalText"></span></div>
                         <div><strong>Clip Range:</strong> <span id="previewTimecodeText">00:00 - 00:45</span></div>
@@ -185,6 +216,14 @@
                                         </button>
                                     </form>
                                 <% } %>
+                                <button type="button" class="btn btn-sm btn-danger text-white fw-semibold" 
+                                        onclick='openAndPlayPost(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)' title="Play Real Video with Voiceover &amp; Karaoke Subtitles">
+                                    <i class="bi bi-play-fill"></i> Watch
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick='quickExportPostVideo(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)' title="Download Video File (.webm)">
+                                    <i class="bi bi-download"></i>
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" 
                                         onclick='openStudioPreview(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)'>
                                     <i class="bi bi-eye"></i> Review
@@ -242,10 +281,20 @@
                             </span>
                         </td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" 
-                                    onclick='openStudioPreview(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)'>
-                                <%= post.status === 'pending_approval' ? 'Review & Edit' : 'Inspect & Reschedule' %>
-                            </button>
+                            <div class="d-inline-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-danger text-white fw-semibold" 
+                                        onclick='openAndPlayPost(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)' title="Play Real Video with Voiceover &amp; Karaoke Subtitles">
+                                    <i class="bi bi-play-fill"></i> Watch
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick='quickExportPostVideo(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)' title="Download Video File (.webm)">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick='openStudioPreview(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)'>
+                                    <%= post.status === 'pending_approval' ? 'Review & Edit' : 'Inspect' %>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     <% }); %>
@@ -258,8 +307,150 @@
     </div>
 </div>
 
+<script src="/js/shorts-player.js"></script>
+
 <script>
+let modalVideoEngine = null;
+let currentModalPost = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('modalShortsCanvas');
+    if (canvas) {
+        modalVideoEngine = new ShortsVideoEngine('modalShortsCanvas', {
+            width: 540,
+            height: 960,
+            onTimeUpdate: (time, duration) => {
+                const timeEl = document.getElementById('modalTimeDisplay');
+                if (timeEl) {
+                    timeEl.textContent = `${formatTime(time)} / ${formatTime(duration)}`;
+                }
+            },
+            onEnded: () => {
+                updateModalPlayBtn(false);
+            }
+        });
+    }
+
+    const modalEl = document.getElementById('postPreviewModal');
+    if (modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            if (modalVideoEngine) {
+                modalVideoEngine.pause();
+                updateModalPlayBtn(false);
+            }
+        });
+    }
+});
+
+function formatTime(sec) {
+    const s = Math.floor(sec || 0);
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
+}
+
+function synthesizeVideoDataFromPost(post) {
+    if (post.video_data) return post.video_data;
+    if (post.video_data_json) {
+        try {
+            return JSON.parse(post.video_data_json);
+        } catch (e) {}
+    }
+
+    const title = post.theme || "Viral YouTube Short";
+    const desc = post.description || "";
+    const isKids = (title + ' ' + desc).toLowerCase().match(/kid|wonder|tale|story|bedtime|pip|bunny|whisper/);
+    const duration = post.duration_seconds || 30;
+
+    if (isKids) {
+        return {
+            title: title,
+            theme: title,
+            channel_handle: "@tiinywondertales",
+            duration_seconds: duration,
+            viral_score: post.viral_score || 94,
+            description: desc || "Enchanting animated bedtime story.",
+            hashtags: post.hashtags || "#shorts #tiinywondertales #kidsstories",
+            scenes: [
+                {
+                    scene_number: 1,
+                    start_sec: 0,
+                    end_sec: Math.floor(duration / 3),
+                    visual_type: "bioluminescent_forest",
+                    visual_prompt: "Deep enchanted twilight forest with bioluminescent moss and glowing mushrooms",
+                    narration: title + ". In the quiet Whispering Woods, a magical light appeared.",
+                    sound_effect: "chime",
+                    camera: "zoom_in"
+                },
+                {
+                    scene_number: 2,
+                    start_sec: Math.floor(duration / 3),
+                    end_sec: Math.floor(duration * 2 / 3),
+                    visual_type: "bioluminescent_forest",
+                    visual_prompt: "Pip the little firefly meeting woodland creature friends",
+                    narration: "Pip discovered that even the smallest spark of kindness can light up the entire forest.",
+                    sound_effect: "whoosh",
+                    camera: "pan_right"
+                },
+                {
+                    scene_number: 3,
+                    start_sec: Math.floor(duration * 2 / 3),
+                    end_sec: duration,
+                    visual_type: "bioluminescent_forest",
+                    visual_prompt: "Golden stars falling like gentle fairy dust over the sleepy mossy tree",
+                    narration: "Sleep tight, little dreamers. Subscribe to TinyWonderTales for bedtime adventures!",
+                    sound_effect: "sparkle",
+                    camera: "pulse"
+                }
+            ]
+        };
+    } else {
+        return {
+            title: title,
+            theme: title,
+            channel_handle: "@thedailyE-shorts",
+            duration_seconds: duration,
+            viral_score: post.viral_score || 92,
+            description: desc || "Relatable comedy short skit.",
+            hashtags: post.hashtags || "#shorts #thedailyEshorts #comedy #relatable",
+            scenes: [
+                {
+                    scene_number: 1,
+                    start_sec: 0,
+                    end_sec: Math.floor(duration / 3),
+                    visual_type: "comic_pop_studio",
+                    visual_prompt: "Vibrant comic sunburst, emergency calendar alarm alert, pure comedic panic",
+                    narration: title + "! That exact split second when reality hits you out of nowhere.",
+                    sound_effect: "pop",
+                    camera: "zoom_in"
+                },
+                {
+                    scene_number: 2,
+                    start_sec: Math.floor(duration / 3),
+                    end_sec: Math.floor(duration * 2 / 3),
+                    visual_type: "comic_pop_studio",
+                    visual_prompt: "Daily panic overthinking, clock spinning fast, funny relatable expression",
+                    narration: "Your brain tries to negotiate an escape plan: 'If I don't look at it, maybe it goes away.'",
+                    sound_effect: "whoosh",
+                    camera: "pan_right"
+                },
+                {
+                    scene_number: 3,
+                    start_sec: Math.floor(duration * 2 / 3),
+                    end_sec: duration,
+                    visual_type: "comic_pop_studio",
+                    visual_prompt: "Explosion of comic pop dots, viral subscribe badge bouncing",
+                    narration: "Tag that friend who is guilty of this every single week, and hit subscribe on The Daily Shorts!",
+                    sound_effect: "sparkle",
+                    camera: "pulse"
+                }
+            ]
+        };
+    }
+}
+
 function openStudioPreview(post) {
+    currentModalPost = post;
     const modalEl = document.getElementById('postPreviewModal');
     if (!modalEl) return;
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -275,13 +466,6 @@ function openStudioPreview(post) {
     
     const badgeType = document.getElementById('previewBadgeType');
     const aiSection = document.getElementById('aiLightingScriptSection');
-    const imgEl = document.getElementById('previewImage');
-    
-    if (post.image_filename) {
-        imgEl.src = "/uploads/media_files/" + post.image_filename;
-    } else {
-        imgEl.src = "/uploads/media_files/sample_workspace.svg";
-    }
 
     if (post.post_type === 'ai_video' || (post.approved_theme && post.approved_theme.strategy === 'ai_video')) {
         badgeType.innerHTML = '<span class="badge-ai"><i class="bi bi-stars"></i> Similar AI Video Concept</span>';
@@ -291,6 +475,13 @@ function openStudioPreview(post) {
     } else {
         badgeType.innerHTML = '<span class="badge-shorts"><i class="bi bi-scissors"></i> Shorts Highlights Extract</span>';
         aiSection.style.display = 'none';
+    }
+
+    // Load video into canvas engine
+    const videoData = synthesizeVideoDataFromPost(post);
+    if (modalVideoEngine) {
+        modalVideoEngine.loadVideoData(videoData);
+        updateModalPlayBtn(false);
     }
 
     const rescheduleSection = document.getElementById('rescheduleTimeSectionModal');
@@ -309,6 +500,83 @@ function openStudioPreview(post) {
     }
 
     modal.show();
+}
+
+function openAndPlayPost(post) {
+    openStudioPreview(post);
+    setTimeout(() => {
+        if (modalVideoEngine) {
+            modalVideoEngine.seek(0);
+            modalVideoEngine.play();
+            updateModalPlayBtn(true);
+        }
+    }, 400);
+}
+
+function modalTogglePlay() {
+    if (!modalVideoEngine) return;
+    const isPlaying = modalVideoEngine.togglePlay();
+    updateModalPlayBtn(isPlaying);
+}
+
+function updateModalPlayBtn(isPlaying) {
+    const icon = document.getElementById('modalPlayBtnIcon');
+    const overlay = document.getElementById('modalCanvasPlayOverlay');
+    if (icon) {
+        icon.className = isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+    }
+    if (overlay) {
+        overlay.style.display = isPlaying ? 'none' : 'flex';
+    }
+}
+
+function modalRestart() {
+    if (!modalVideoEngine) return;
+    modalVideoEngine.seek(0);
+    modalVideoEngine.play();
+    updateModalPlayBtn(true);
+}
+
+function modalToggleMute() {
+    if (!modalVideoEngine) return;
+    const muted = modalVideoEngine.toggleMute();
+    const icon = document.getElementById('modalMuteBtnIcon');
+    if (icon) {
+        icon.className = muted ? 'bi bi-volume-mute-fill text-danger' : 'bi bi-volume-up-fill';
+    }
+}
+
+async function modalExportVideo() {
+    if (!modalVideoEngine) return;
+    const overlay = document.getElementById('modalExportOverlay');
+    const statusText = document.getElementById('modalExportStatus');
+    const progressBar = document.getElementById('modalExportProgressBar');
+    const percentText = document.getElementById('modalExportPercent');
+
+    overlay.classList.remove('d-none');
+    overlay.classList.add('d-flex');
+
+    try {
+        await modalVideoEngine.exportVideoAsFile(({ percent, status }) => {
+            progressBar.style.width = `${percent}%`;
+            statusText.textContent = status;
+            percentText.textContent = `${percent}% Complete`;
+        });
+    } catch (e) {
+        alert('Export error: ' + e.message);
+    } finally {
+        setTimeout(() => {
+            overlay.classList.remove('d-flex');
+            overlay.classList.add('d-none');
+        }, 1200);
+    }
+}
+
+function quickExportPostVideo(post) {
+    openStudioPreview(post);
+    setTimeout(() => {
+        modalExportVideo();
+    }, 500);
 }
 
 function requestChanges(postId, postTheme) {
@@ -357,7 +625,6 @@ function optimizeCurrentModalAlgorithm() {
     document.getElementById('previewDescriptionModalText').value = fullDesc;
     document.getElementById('previewHashtagsModalText').value = tags;
     
-    // Quick visual toast
     const badge = document.createElement('div');
     badge.className = 'alert alert-success py-1 px-3 position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold z-3';
     badge.innerHTML = '<i class="bi bi-magic me-1"></i> Re-Optimized Description &amp; Hashtags for YouTube Algorithm Reach!';
