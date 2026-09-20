@@ -1,0 +1,2066 @@
+import express from 'express';
+import session from 'express-session';
+import flash from 'connect-flash';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = 3000;
+
+// Ensure upload folder exists
+const uploadDir = path.join(__dirname, 'uploads', 'media_files');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer storage for uploaded media
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    const uniqueName = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage });
+
+// EJS View Engine setup
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use('/uploads/media_files', express.static(uploadDir));
+
+// Session & Flash
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'instagram-automation-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 },
+  })
+);
+app.use(flash());
+
+// Pass flash messages & session info to all views
+app.use((req, res, next) => {
+  res.locals.messages = req.flash();
+  res.locals.session = req.session;
+  next();
+});
+
+// ==========================================
+// In-Memory Data Store (Entities & State)
+// ==========================================
+
+let nextAccountId = 3;
+let nextThemeId = 3;
+let nextPostId = 4;
+let nextScheduleId = 3;
+
+const accounts = [
+  {
+    id: 1,
+    channel_title: 'TinyWonderTales',
+    username: 'tiinywondertales',
+    status: 'active_session',
+    notes: 'AI animated kids stories, nursery rhymes, moral tales & bedtime animation shorts (@tiinywondertales)',
+    subscribers: '1.4K',
+    default_privacy: 'public',
+    added_at: new Date(Date.now() - 7 * 86400000),
+    default_curation_sources_json: JSON.stringify(['@cocomelon', '@supersimple', '@brightlystorytime']),
+  },
+  {
+    id: 2,
+    channel_title: 'The Daily Shorts dot com',
+    username: 'thedailyE-shorts',
+    status: 'active_session',
+    notes: 'Comedy clips, relatable daily moments, street skits & viral reaction shorts (@thedailyE-shorts)',
+    subscribers: '3.2K',
+    default_privacy: 'public',
+    added_at: new Date(Date.now() - 5 * 86400000),
+    default_curation_sources_json: JSON.stringify(['@mrbeastshorts', '@dailycomedy', '@viralscroll', '@scumbagdad']),
+  },
+];
+
+const approvedThemes = [
+  {
+    id: 1,
+    theme_name: 'Magical Bedtime Moral Tales & Animal Friends',
+    base_description: 'Vibrant animated 3D story clips teaching kindness, honesty, and curiosity for toddlers and young kids.',
+    base_hashtags: '#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #animation',
+    base_media_filename: 'sample_workspace.svg',
+    content_type_preference: 'video',
+    strategy: 'ai_video',
+    ai_lighting_profile: 'Soft Golden Hour Diffusion + Whimsical Fairy Glow',
+    ai_voiceover_style: 'Calm, warm, bedtime story narrator voice',
+    reel_duration_seconds: 45,
+    is_active: true,
+    created_at: new Date(Date.now() - 3 * 86400000),
+    instagram_account_id: 1,
+    generation_mode: 'ai_visual',
+    source_accounts_json: JSON.stringify(['@cocomelon', '@supersimple', '@brightlystorytime']),
+    sourcing_strategy: 'viral_outliers',
+  },
+  {
+    id: 2,
+    theme_name: 'Relatable Comedy & Daily Life Viral Skits',
+    base_description: 'Punchy comedic observations, relatable situations, and high retention hook moments sliced into vertical Shorts.',
+    base_hashtags: '#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts',
+    base_media_filename: 'sample_sunset.svg',
+    content_type_preference: 'video',
+    strategy: 'short_clips',
+    reel_duration_seconds: 35,
+    is_active: true,
+    created_at: new Date(Date.now() - 2 * 86400000),
+    instagram_account_id: 2,
+    generation_mode: 'curation',
+    source_accounts_json: JSON.stringify(['@mrbeastshorts', '@dailycomedy', '@viralscroll', '@scumbagdad']),
+    sourcing_strategy: 'viral_outliers',
+  },
+];
+
+const themeSchedules = [
+  {
+    id: 1,
+    approved_theme_id: 1,
+    posts_per_day: 2,
+    scheduled_times_json: JSON.stringify([
+      { time: '11:30', media_pref: 'theme_default' },
+      { time: '19:00', media_pref: 'theme_default' },
+    ]),
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date(),
+  },
+  {
+    id: 2,
+    approved_theme_id: 2,
+    posts_per_day: 2,
+    scheduled_times_json: JSON.stringify([
+      { time: '15:30', media_pref: 'short_clips' },
+      { time: '20:30', media_pref: 'short_clips' },
+    ]),
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date(),
+  },
+];
+
+const posts = [
+  {
+    id: 1,
+    theme: 'The Brave Little Firefly Who Lost His Light',
+    description: 'Pip the firefly thinks he has lost his glow, until he helps a lost forest friend in the dark! ✨ A heart-warming story on kindness and inner courage. Full bedtime story in comments!',
+    hashtags: '#kidsstories #bedtimestory #moralstories #animation #shorts #cuteanimals #tiinywondertales',
+    image_filename: 'sample_workspace.svg',
+    media_type: 'video',
+    post_type: 'ai_video',
+    clip_timestamp: '00:00 - 00:45',
+    viral_score: 94,
+    ai_lighting_notes: 'Warm amber bioluminescent glow against deep twilight indigo forest background.',
+    ai_voiceover_script: 'Pip was the tiniest firefly in the Whispering Woods, and tonight... his light would not turn on. But when Barnaby the bunny got lost, Pip discovered that true light comes from helping others.',
+    duration_seconds: 45,
+    scheduled_time: new Date(Date.now() + 2 * 3600000),
+    posted_at: null,
+    status: 'pending_approval',
+    created_at: new Date(),
+    upload_error_message: null,
+    approved_theme_id: 1,
+    original_source_url: null,
+    retrieved_from_account: null,
+  },
+  {
+    id: 2,
+    theme: 'When you accidentally agree to plans 3 weeks in advance',
+    description: 'The sheer panic when the calendar notification actually goes off 😂 Who else does this every single weekend? #comedy #relatable',
+    hashtags: '#comedy #shorts #relatable #funnymoments #introvertproblems #weekendplans #thedailyEshorts',
+    image_filename: 'sample_sunset.svg',
+    media_type: 'video',
+    post_type: 'short_clips',
+    clip_timestamp: '00:12 - 00:48',
+    viral_score: 91,
+    duration_seconds: 36,
+    scheduled_time: new Date(Date.now() + 5 * 3600000),
+    posted_at: null,
+    status: 'scheduled',
+    created_at: new Date(Date.now() - 3600000),
+    upload_error_message: null,
+    approved_theme_id: 2,
+    original_source_url: 'https://www.youtube.com/watch?v=sample_comedy_sketch',
+    retrieved_from_account: '@dailycomedy',
+  },
+  {
+    id: 3,
+    theme: 'Why do cats stare at empty walls at 3 AM?',
+    description: 'Scientists explain the invisible greebles in your living room 🐱 Who is your cat talking to? #catsofyoutube #comedy #funnymoments',
+    hashtags: '#shorts #cats #comedy #relatable #funnyanimals #thedailyEshorts',
+    image_filename: 'sample_workspace.svg',
+    media_type: 'video',
+    post_type: 'short_clips',
+    clip_timestamp: '00:05 - 00:35',
+    viral_score: 89,
+    duration_seconds: 30,
+    scheduled_time: new Date(Date.now() - 10 * 3600000),
+    posted_at: new Date(Date.now() - 10 * 3600000),
+    status: 'posted',
+    created_at: new Date(Date.now() - 86400000),
+    upload_error_message: null,
+    approved_theme_id: 2,
+    original_source_url: null,
+    retrieved_from_account: null,
+  },
+];
+
+// Helper to format Date
+function formatDate(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().replace('T', ' ').substring(0, 16);
+}
+
+// Generate SVG dummy placeholder image
+function createDummyMediaFile(themeName, mediaType = 'image', duration = null) {
+  const uniqueId = Math.random().toString(36).substring(2, 9);
+  const filename = `media_${uniqueId}.svg`;
+  const filepath = path.join(uploadDir, filename);
+
+  const isVideo = mediaType === 'video';
+  const bgColor1 = isVideo ? '#FF416C' : '#4776E6';
+  const bgColor2 = isVideo ? '#FF4B2B' : '#8E54E9';
+  const label = isVideo ? `REEL VIDEO (~${duration || 30}s)` : 'POST IMAGE';
+
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="grad_${uniqueId}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${bgColor1}" />
+      <stop offset="100%" stop-color="${bgColor2}" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" rx="24" fill="url(#grad_${uniqueId})" />
+  <rect x="40" y="40" width="520" height="520" rx="16" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <circle cx="300" cy="250" r="60" fill="none" stroke="#ffffff" stroke-width="7" />
+  <rect x="235" y="185" width="130" height="130" rx="30" fill="none" stroke="#ffffff" stroke-width="7" />
+  <circle cx="335" cy="215" r="8" fill="#ffffff" />
+  <text x="300" y="380" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">${escapeXml(themeName.slice(0, 32))}</text>
+  <text x="300" y="420" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" fill="rgba(255,255,255,0.9)" text-anchor="middle">${label}</text>
+  <text x="300" y="460" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" fill="rgba(255,255,255,0.7)" text-anchor="middle">Generated via Instagram Automation Tool</text>
+</svg>`;
+
+  fs.writeFileSync(filepath, svgContent, 'utf-8');
+  return filename;
+}
+
+function escapeXml(unsafe) {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+    }
+    return c;
+  });
+}
+
+// Parse usernames / URLs
+function parseSourceInputs(inputStr) {
+  if (!inputStr) return [];
+  const set = new Set();
+  const items = inputStr.split(',').map((s) => s.trim()).filter(Boolean);
+  for (const item of items) {
+    if (item.includes('instagram.com/')) {
+      try {
+        const url = new URL(item);
+        const segments = url.pathname.split('/').filter(Boolean);
+        if (segments.length > 0 && !['p', 'reels', 'explore', 'accounts'].includes(segments[0])) {
+          const user = segments[0].toLowerCase();
+          if (/^[a-zA-Z0-9._]{1,30}$/.test(user)) {
+            set.add(user);
+          }
+        }
+      } catch (e) {
+        // Fallback or ignore
+      }
+    } else {
+      const user = item.replace(/^@/, '').toLowerCase();
+      if (/^[a-zA-Z0-9._]{1,30}$/.test(user)) {
+        set.add(user);
+      }
+    }
+  }
+  return Array.from(set);
+}
+
+// Gemini AI Caption & Hashtag Generation
+let geminiClient = null;
+function getGeminiClient() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI({ apiKey: key });
+  }
+  return geminiClient;
+}
+
+async function generateGeminiContent(themeName, baseDescription, existingHashtags = '', mediaType = 'image', suggestions = '') {
+  const ai = getGeminiClient();
+
+  const staticTrending = '#trending, #viral, #popular, #instagood, #explorepage, #aesthetic, #viralreels, #creators, #dailymotivation, #instadaily';
+
+  if (!ai) {
+    // Graceful fallback with rich authentic caption and hashtags
+    const suggestionNote = suggestions ? ` (Incorporating suggestion: "${suggestions}")` : '';
+    const caption = `Discover the essence of ${themeName}.${suggestionNote} ${baseDescription ? baseDescription : 'Bringing thoughtful curation and aesthetic inspiration to your feed daily.'} What are your thoughts on this? Save this post and let us know in the comments below!`;
+    const combinedTags = existingHashtags ? `${existingHashtags}, ${staticTrending}` : `#${themeName.toLowerCase().replace(/[^a-z0-9]/g, '')}, ${staticTrending}`;
+    return { caption, hashtags: combinedTags };
+  }
+
+  try {
+    const prompt = `You are an expert Instagram content creator and SEO specialist. Write a compelling and engaging Instagram caption and suggest trending, relevant hashtags.
+The main theme is: "${themeName}".
+The content type is: "${mediaType}".
+Core concept/description: "${baseDescription}".
+${suggestions ? `Additional user suggestions to incorporate: "${suggestions}"` : ''}
+
+Rules:
+1. Write a 2-4 sentence caption with an engaging hook and call to action.
+2. Do not put hashtags inside the caption itself.
+3. Provide 4-7 targeted hashtags.
+Format strictly as:
+CAPTION: [Your generated caption]
+HASHTAGS: [comma-separated hashtags with # symbol]`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    const responseText = response.text || '';
+    let caption = `Fresh inspiration on ${themeName}: ${baseDescription}`;
+    let hashtags = existingHashtags || staticTrending;
+
+    if (responseText.includes('CAPTION:') && responseText.includes('HASHTAGS:')) {
+      const parts = responseText.split('HASHTAGS:');
+      const captionPart = parts[0].replace('CAPTION:', '').trim();
+      const tagsPart = parts[1].trim();
+      if (captionPart) caption = captionPart;
+      if (tagsPart) hashtags = tagsPart;
+    } else if (responseText.includes('CAPTION:')) {
+      caption = responseText.replace('CAPTION:', '').trim();
+    } else {
+      caption = responseText.trim().substring(0, 300);
+    }
+
+    // Combine with trending
+    const tagsList = hashtags.split(',').map((t) => t.trim()).filter(Boolean);
+    const trendingList = staticTrending.split(',').map((t) => t.trim()).filter(Boolean);
+    const tagSet = new Set(tagsList);
+    for (const t of trendingList) {
+      if (!tagSet.has(t) && tagSet.size < 15) {
+        tagSet.add(t);
+      }
+    }
+
+    return { caption, hashtags: Array.from(tagSet).join(', ') };
+  } catch (err) {
+    console.error('Error in Gemini generation:', err);
+    return {
+      caption: `Capturing moments of ${themeName}: ${baseDescription}. Share your perspective with us in the comments!`,
+      hashtags: existingHashtags || staticTrending,
+    };
+  }
+}
+
+// ==========================================
+// Routes
+// ==========================================
+
+// Dashboard
+app.get(['/', '/dashboard'], (req, res) => {
+  const pendingPosts = posts
+    .filter((p) => p.status === 'pending_approval')
+    .map((p) => {
+      const theme = approvedThemes.find((t) => t.id === p.approved_theme_id);
+      return {
+        ...p,
+        scheduled_time_formatted: formatDate(p.scheduled_time),
+        approved_theme: theme || null,
+      };
+    });
+
+  const today = new Date();
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  const scheduledTodayCount = posts.filter(
+    (p) =>
+      p.scheduled_time &&
+      new Date(p.scheduled_time) >= startOfDay &&
+      new Date(p.scheduled_time) <= endOfDay &&
+      ['scheduled', 'pending_approval', 'posted'].includes(p.status)
+  ).length;
+
+  const activeThemesCount = approvedThemes.filter((t) => t.is_active).length;
+
+  res.render('dashboard', {
+    title: 'Dashboard',
+    pending_posts: pendingPosts,
+    active_themes_count: activeThemesCount,
+    scheduled_today_count: scheduledTodayCount,
+    accounts_count: accounts.length,
+  });
+});
+
+// All Posts Page
+app.get('/all_posts', (req, res) => {
+  const today = new Date();
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  const populatePost = (p) => {
+    const theme = approvedThemes.find((t) => t.id === p.approved_theme_id);
+    const account = theme ? accounts.find((a) => a.id === theme.instagram_account_id) : null;
+    return {
+      ...p,
+      scheduled_time_formatted: formatDate(p.scheduled_time),
+      created_at_formatted: formatDate(p.created_at),
+      approved_theme: theme ? { ...theme, instagram_account: account } : null,
+    };
+  };
+
+  const todaysPosts = posts
+    .filter((p) => {
+      if (!p.scheduled_time) return false;
+      const st = new Date(p.scheduled_time);
+      return st >= startOfDay && st <= endOfDay && ['scheduled', 'pending_approval', 'posted', 'failed_upload'].includes(p.status);
+    })
+    .sort((a, b) => new Date(a.scheduled_time) - new Date(b.scheduled_time))
+    .map(populatePost);
+
+  const todaysIds = new Set(todaysPosts.map((p) => p.id));
+  const otherPosts = posts
+    .filter((p) => !todaysIds.has(p.id))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .map(populatePost);
+
+  res.render('all_posts', {
+    title: 'All Posts',
+    todays_posts: todaysPosts,
+    other_posts: otherPosts,
+  });
+});
+
+// Post Approval & Action Routes
+app.post('/post/:id/approve', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const post = posts.find((p) => p.id === id);
+  if (post && post.status === 'pending_approval') {
+    post.status = 'scheduled';
+    req.flash('success', `Post '${post.theme.slice(0, 30)}...' (ID: ${id}) approved and scheduled.`);
+  } else {
+    req.flash('warning', `Post cannot be approved in current status.`);
+  }
+  res.redirect('/all_posts');
+});
+
+app.post('/post/:id/decline', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const post = posts.find((p) => p.id === id);
+  if (post && post.status === 'pending_approval') {
+    post.status = 'rejected_by_user';
+    req.flash('info', `Post '${post.theme.slice(0, 30)}...' (ID: ${id}) has been declined.`);
+  } else {
+    req.flash('warning', `Post cannot be declined.`);
+  }
+  res.redirect('/all_posts');
+});
+
+app.post('/post/:id/approve_with_edits', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const post = posts.find((p) => p.id === id);
+  if (post && post.status === 'pending_approval') {
+    post.description = req.body.description || post.description;
+    post.hashtags = req.body.hashtags || post.hashtags;
+    post.status = 'scheduled';
+    req.flash('success', `Post '${post.theme.slice(0, 30)}...' approved with edits and scheduled.`);
+  } else {
+    req.flash('warning', 'Post not pending approval.');
+  }
+  res.redirect('/all_posts');
+});
+
+app.post('/post/:id/request_changes', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const post = posts.find((p) => p.id === id);
+  const suggestions = req.body.suggestions;
+  if (post && post.status === 'pending_approval' && suggestions) {
+    const parentTheme = approvedThemes.find((t) => t.id === post.approved_theme_id);
+    const generated = await generateGeminiContent(
+      post.theme,
+      post.description,
+      post.hashtags,
+      post.media_type,
+      suggestions
+    );
+    post.description = generated.caption;
+    post.hashtags = generated.hashtags;
+    req.flash('info', `Changes requested. Post '${post.theme.slice(0, 30)}...' updated for re-review.`);
+  } else {
+    req.flash('warning', 'Could not request changes.');
+  }
+  res.redirect('/all_posts');
+});
+
+app.post('/post/:id/get_new_option', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const originalPost = posts.find((p) => p.id === id);
+  if (originalPost && originalPost.status === 'pending_approval') {
+    const theme = approvedThemes.find((t) => t.id === originalPost.approved_theme_id);
+    originalPost.status = 'replaced_by_new_option';
+
+    const newMediaFilename = createDummyMediaFile(theme ? theme.theme_name : originalPost.theme, originalPost.media_type, originalPost.duration_seconds);
+
+    const newPost = {
+      id: nextPostId++,
+      theme: `ALT: ${originalPost.theme}`,
+      description: `Fresh alternative option for '${originalPost.theme}'. Tailored with new creative perspective.`,
+      hashtags: `${originalPost.hashtags}, #AlternativeOption, #FreshLook`,
+      image_filename: newMediaFilename,
+      media_type: originalPost.media_type,
+      duration_seconds: originalPost.duration_seconds,
+      scheduled_time: originalPost.scheduled_time,
+      posted_at: null,
+      status: 'pending_approval',
+      created_at: new Date(),
+      upload_error_message: null,
+      approved_theme_id: originalPost.approved_theme_id,
+      original_source_url: originalPost.original_source_url,
+      retrieved_from_account: originalPost.retrieved_from_account,
+    };
+    posts.push(newPost);
+    req.flash('info', `Previous post replaced. New option #${newPost.id} generated for re-review.`);
+  } else {
+    req.flash('warning', 'Cannot generate alternative option for this post.');
+  }
+  res.redirect('/all_posts');
+});
+
+app.post('/post/:id/reschedule_and_reapprove', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const post = posts.find((p) => p.id === id);
+  if (post) {
+    if (req.body.description) post.description = req.body.description;
+    if (req.body.hashtags) post.hashtags = req.body.hashtags;
+    if (req.body.new_schedule_time) {
+      post.scheduled_time = new Date(req.body.new_schedule_time);
+    }
+    post.status = 'scheduled';
+    req.flash('success', `Post ID ${id} rescheduled and re-approved.`);
+  }
+  res.redirect('/all_posts');
+});
+
+// ==========================================
+// YouTube Analyzer & Helpers
+// ==========================================
+
+function parseISO8601Duration(duration) {
+  if (!duration) return '0:30';
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return '0:30';
+  const hours = parseInt(match[1] || 0, 10);
+  const minutes = parseInt(match[2] || 0, 10);
+  const seconds = parseInt(match[3] || 0, 10);
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatViewsCount(views) {
+  const num = parseInt(views, 10);
+  if (isNaN(num)) return views || '10K views';
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M views';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K views';
+  return num + ' views';
+}
+
+function formatLikesCount(likes) {
+  const num = parseInt(likes, 10);
+  if (isNaN(num)) return likes || '5K';
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num ? num.toString() : '1.2K';
+}
+
+function extractYouTubeVideoId(input) {
+  if (!input) return null;
+  const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|watch\?.+&v=))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
+function getFallbackChannelData(query) {
+  const clean = (query || '').replace(/^@/, '').trim() || 'trending';
+  const isKids = clean.toLowerCase().includes('kid') || clean.toLowerCase().includes('wonder') || clean.toLowerCase().includes('tale');
+  const isComedy = clean.toLowerCase().includes('daily') || clean.toLowerCase().includes('short') || clean.toLowerCase().includes('comedy');
+
+  if (isKids) {
+    return {
+      channel_title: 'TinyWonderTales - AI Kids Adventures',
+      handle: `@${clean}`,
+      subscribers: '1.4K',
+      total_videos: '24',
+      niche_summary: 'AI animated bedtime stories, vibrant moral adventures, and sensory learning for toddlers and young kids.',
+      top_videos: [
+        {
+          id: 'kids_vid_01',
+          title: 'The Brave Little Firefly Who Lost His Light ✨ Bedtime Story',
+          duration: '3:45',
+          views: '48.2K views',
+          likes: '3.4K',
+          summary: 'Pip the little firefly thinks he has lost his glow until he helps a lost bunny friend in the dark forest.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+        },
+        {
+          id: 'kids_vid_02',
+          title: 'Barnaby Bunny & The Whispering Rainbow Cloud 🌈',
+          duration: '4:12',
+          views: '32.1K views',
+          likes: '2.8K',
+          summary: 'A whimsical adventure teaching sharing and patience with delightful woodland animal friends.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
+        },
+        {
+          id: 'kids_vid_03',
+          title: 'The Little Robot Who Learned To Dream 🤖🌙',
+          duration: '3:15',
+          views: '26.8K views',
+          likes: '2.1K',
+          summary: 'Sparky the robot discovers music, lullabies, and nighttime wonder.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop&q=80',
+        },
+      ],
+    };
+  }
+
+  if (isComedy) {
+    return {
+      channel_title: 'The Daily Shorts',
+      handle: `@${clean}`,
+      subscribers: '3.2K',
+      total_videos: '52',
+      niche_summary: 'Bite-sized viral comedy skits, relatable daily situations, street jokes, and satisfying short-form clips.',
+      top_videos: [
+        {
+          id: 'comedy_vid_01',
+          title: 'When you accidentally agree to plans 3 weeks in advance 😂',
+          duration: '0:45',
+          views: '280.5K views',
+          likes: '24.1K',
+          summary: 'The sheer panic when the calendar notification actually goes off on a Saturday afternoon.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
+        },
+        {
+          id: 'comedy_vid_02',
+          title: 'Why cats stare at empty walls at 3 AM 🐱',
+          duration: '0:38',
+          views: '194.2K views',
+          likes: '18.9K',
+          summary: 'Cat owners know this universal mystery: the invisible living room entities.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=80',
+        },
+        {
+          id: 'comedy_vid_03',
+          title: 'Things that make 100% sense until you say them out loud 💀',
+          duration: '0:52',
+          views: '142.7K views',
+          likes: '14.2K',
+          summary: 'Everyday brain glitches and funny misunderstandings captured in under 60 seconds.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=600&auto=format&fit=crop&q=80',
+        },
+      ],
+    };
+  }
+
+  return {
+    channel_title: clean.toUpperCase(),
+    handle: `@${clean}`,
+    subscribers: '12.5K',
+    total_videos: '38',
+    niche_summary: `Signature educational, science, and viral breakdowns exploring ${clean}.`,
+    top_videos: [
+      {
+        id: 'top_vid_01',
+        title: `The Science of Focus & Peak Attention Protocol`,
+        duration: '14:20',
+        views: '1.2M views',
+        likes: '85K',
+        summary: 'Neurobiological exploration of dopamine, prefrontal cortex engagement, and sustainable daily focus.',
+        thumbnail_url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'top_vid_02',
+        title: `The Unexpected Paradox of High Achievers`,
+        duration: '11:15',
+        views: '840K views',
+        likes: '62K',
+        summary: 'Why conventional goal-setting models fail and what elite performers do differently.',
+        thumbnail_url: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'top_vid_03',
+        title: `How Sleep Architecture Shapes Memory Consolidation`,
+        duration: '18:40',
+        views: '620K views',
+        likes: '48K',
+        summary: 'Detailed research into REM and deep slow-wave sleep cycles for cognitive longevity.',
+        thumbnail_url: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600&auto=format&fit=crop&q=80',
+      },
+    ],
+  };
+}
+
+async function fetchYouTubeData(query) {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const videoId = extractYouTubeVideoId(query);
+
+  if (videoId && apiKey) {
+    try {
+      const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`);
+      const vidData = await vidRes.json();
+      if (vidData.items && vidData.items.length > 0) {
+        const item = vidData.items[0];
+        const channelId = item.snippet.channelId;
+        const channelTitle = item.snippet.channelTitle;
+
+        let subCount = '12K';
+        let totalVideos = '48';
+        try {
+          const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${apiKey}`);
+          const chData = await chRes.json();
+          if (chData.items && chData.items.length > 0) {
+            subCount = formatLikesCount(chData.items[0].statistics?.subscriberCount);
+            totalVideos = chData.items[0].statistics?.videoCount || '48';
+          }
+        } catch (e) {
+          // ignore channel stats error
+        }
+
+        const topVideo = {
+          id: item.id,
+          title: item.snippet.title,
+          duration: parseISO8601Duration(item.contentDetails.duration),
+          views: formatViewsCount(item.statistics?.viewCount),
+          likes: formatLikesCount(item.statistics?.likeCount),
+          summary: item.snippet.description ? item.snippet.description.slice(0, 180) : 'High engagement YouTube video with strong retention triggers.',
+          thumbnail_url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+        };
+
+        return {
+          channel_title: channelTitle,
+          handle: `@${channelTitle.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          subscribers: subCount,
+          total_videos: totalVideos,
+          niche_summary: `Video analysis: ${item.snippet.title}`,
+          top_videos: [topVideo],
+        };
+      }
+    } catch (err) {
+      console.error('Error fetching video from YouTube API:', err);
+    }
+  }
+
+  if (apiKey) {
+    try {
+      const cleanHandle = query.replace(/^@/, '').trim();
+      let channelId = null;
+      let channelTitle = cleanHandle;
+      let subCount = '10K';
+      let totalVideos = '45';
+      let nicheSummary = `Specialized content channel exploring ${cleanHandle}`;
+
+      // 1. Try forHandle
+      const handleRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&forHandle=${encodeURIComponent(cleanHandle)}&key=${apiKey}`);
+      const handleData = await handleRes.json();
+      if (handleData.items && handleData.items.length > 0) {
+        const ch = handleData.items[0];
+        channelId = ch.id;
+        channelTitle = ch.snippet.title;
+        subCount = formatLikesCount(ch.statistics?.subscriberCount);
+        totalVideos = ch.statistics?.videoCount || '45';
+        nicheSummary = ch.snippet.description ? ch.snippet.description.slice(0, 160) : `Signature style focusing on ${channelTitle}`;
+      } else {
+        // 2. Try search by channel
+        const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(cleanHandle)}&maxResults=1&key=${apiKey}`);
+        const searchData = await searchRes.json();
+        if (searchData.items && searchData.items.length > 0) {
+          channelId = searchData.items[0].snippet.channelId;
+          channelTitle = searchData.items[0].snippet.channelTitle;
+          nicheSummary = searchData.items[0].snippet.description ? searchData.items[0].snippet.description.slice(0, 160) : `Content channel for ${channelTitle}`;
+          const statsRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${apiKey}`);
+          const statsData = await statsRes.json();
+          if (statsData.items && statsData.items[0]) {
+            subCount = formatLikesCount(statsData.items[0].statistics?.subscriberCount);
+            totalVideos = statsData.items[0].statistics?.videoCount || '45';
+          }
+        }
+      }
+
+      if (channelId) {
+        const vSearchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=viewCount&type=video&maxResults=6&key=${apiKey}`);
+        const vSearchData = await vSearchRes.json();
+        if (vSearchData.items && vSearchData.items.length > 0) {
+          const videoIds = vSearchData.items.map((it) => it.id.videoId).filter(Boolean);
+          if (videoIds.length > 0) {
+            const vDetailsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds.join(',')}&key=${apiKey}`);
+            const vDetailsData = await vDetailsRes.json();
+            const topVideos = (vDetailsData.items || []).map((v) => ({
+              id: v.id,
+              title: v.snippet.title,
+              duration: parseISO8601Duration(v.contentDetails.duration),
+              views: formatViewsCount(v.statistics?.viewCount),
+              likes: formatLikesCount(v.statistics?.likeCount),
+              summary: v.snippet.description ? v.snippet.description.slice(0, 180) : 'High audience retention YouTube video.',
+              thumbnail_url: v.snippet.thumbnails?.high?.url || v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+            }));
+
+            if (topVideos.length > 0) {
+              return {
+                channel_title: channelTitle,
+                handle: `@${cleanHandle}`,
+                subscribers: subCount,
+                total_videos: totalVideos,
+                niche_summary: nicheSummary,
+                top_videos: topVideos,
+              };
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching channel from YouTube API:', err);
+    }
+  }
+
+  return getFallbackChannelData(query);
+}
+
+function formatYouTubeAlgorithmDescription(hook, synopsis, chapters, pinnedComment, tags) {
+  return `${hook}\n\n${synopsis}\n\n${chapters}\n\n${pinnedComment}\n\n${tags}`;
+}
+
+function buildViralClipsAndAiConcept(video, channelTitle) {
+  const isKids = ((video?.title || '') + ' ' + (channelTitle || '')).toLowerCase().match(/kid|wonder|tale|story|bedtime|nursery|pip|pixel/);
+  const isComedy = ((video?.title || '') + ' ' + (channelTitle || '')).toLowerCase().match(/short|daily|comedy|joke|funny|laugh|vlog|relatable/);
+
+  let clips = [];
+  if (isKids) {
+    clips = [
+      {
+        selected: true,
+        viral_score: 96,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'And just when Pip thought all hope was lost, a tiny sparkle appeared!',
+        duration_seconds: 35,
+        timestamp: '00:15 - 00:50',
+        title: 'The Magic Sparkle in the Whispering Woods ✨',
+        hook_reason: 'Emotional turning point with high curiosity hook and vibrant fairy-glow animation peak.',
+        description: formatYouTubeAlgorithmDescription(
+          '✨ Can a tiny firefly light up the darkest night? Watch Pip discover courage in the Whispering Woods!',
+          'Join Pip the firefly on an enchanting bedtime adventure teaching toddlers and young children about self-confidence, kindness, and restful sleep.',
+          '⏱️ Retention Chapters:\n00:00 - The Whispering Forest Hook\n00:15 - Pip\'s Sparkle Moment\n00:30 - Bedtime Moral Lesson',
+          '🌙 Pinned Question: What was your little one\'s favorite part tonight? Tell us below! 👇',
+          '#shorts #tiinywondertales #kidsstories #bedtimestory #moralstories'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 93,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'Barnaby Bunny took a deep breath and whispered: Thank you Pip!',
+        duration_seconds: 40,
+        timestamp: '01:20 - 02:00',
+        title: 'Barnaby Bunny learns how to be brave 🐰',
+        hook_reason: 'Adorable character interaction with cute dialogue snippet that drives high replay loops.',
+        description: formatYouTubeAlgorithmDescription(
+          '🐰 Even the smallest creature can make the biggest difference when you believe in yourself!',
+          'Barnaby Bunny and Pip show children that asking for help and standing by your friends is a true superpower. Perfect for calming bedtime routines.',
+          '⏱️ Retention Chapters:\n00:00 - Barnaby\'s Nervous Moment\n00:18 - Pip\'s Friendly Encouragement\n00:35 - The Brave Heart Victory',
+          '💕 Pinned Question: What animal friend should visit Pip next? Drop your ideas below! 👇',
+          '#shorts #tiinywondertales #kidsanimation #childrensbook #storytime'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 91,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'Remember little explorer: your true light shines from the inside.',
+        duration_seconds: 30,
+        timestamp: '02:45 - 03:15',
+        title: 'A bedtime moral that every child should hear 🌙',
+        hook_reason: 'Satisfying moral conclusion with soothing lullaby audio cadence.',
+        description: formatYouTubeAlgorithmDescription(
+          '🌙 Your true light doesn\'t come from the sun—it shines from the kindness inside your heart.',
+          'A tranquil moral lullaby story crafted to calm sensory overload and help toddlers drift peacefully into dreamland.',
+          '⏱️ Retention Chapters:\n00:00 - Starlight Whispers\n00:12 - Inner Glow Moral\n00:25 - Sweet Dreams Goodnight',
+          '🌟 Pinned Question: Sending sweet dreams to all our little listeners! Goodnight from TinyWonderTales 🌙',
+          '#shorts #bedtimestory #calmingkids #nurserytales #tiinywondertales'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 89,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'Can you spot the hidden fireflies in the tree? Count with me: 1, 2, 3!',
+        duration_seconds: 32,
+        timestamp: '03:40 - 04:12',
+        title: 'Can you count all the glowing stars with Pip? ⭐',
+        hook_reason: 'Interactive counting element prompting comments and parent engagement.',
+        description: formatYouTubeAlgorithmDescription(
+          '⭐ Quick counting challenge: How many glowing fireflies can you and your toddler spot?',
+          'Interactive, early-learning counting animation featuring Pip. Sparks joyful curiosity and counting mastery for preschoolers.',
+          '⏱️ Retention Chapters:\n00:00 - Spot the Stars Challenge\n00:14 - Counting 1, 2, 3 with Pip\n00:28 - Celebration Sparkles!',
+          '✨ Pinned Question: Did you find all 5 glowing fireflies? Count together and reply below! 👇',
+          '#shorts #earlylearning #countingforkids #preschoolfun #tiinywondertales'
+        ),
+      },
+    ];
+  } else if (isComedy) {
+    clips = [
+      {
+        selected: true,
+        viral_score: 97,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'Me: I am going to be super productive today. Also me 5 minutes later:',
+        duration_seconds: 28,
+        timestamp: '00:08 - 00:36',
+        title: 'The exact moment your productivity leaves your body 😂',
+        hook_reason: 'Instant 3-second relatable visual pattern interrupt with universal comedic appeal.',
+        description: formatYouTubeAlgorithmDescription(
+          '😂 The exact moment you sit down to work and your brain decides to reorganize your 2014 Spotify playlists instead.',
+          'Why is staying locked in on a Monday literally the hardest Olympic sport known to humanity? A brutally relatable look into our shared daily attention span.',
+          '⏱️ Retention Markers:\n00:00 - High Ambition Morning\n00:10 - The 30-Second Attention Drift\n00:22 - The Defeat',
+          '💀 Pinned Question: Who is currently watching this instead of doing what they\'re supposed to be doing? Be honest! 👇',
+          '#shorts #thedailyEshorts #comedy #relatable #viralshorts'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 94,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'When your friend says they are 5 minutes away but haven’t even left bed:',
+        duration_seconds: 34,
+        timestamp: '01:05 - 01:39',
+        title: 'That one friend who operates on imaginary time zones ⏰',
+        hook_reason: 'High shareability hook that drives users to tag friends in the comments.',
+        description: formatYouTubeAlgorithmDescription(
+          '⏰ "I\'m literally turning the corner!" (Translation: I haven\'t even found matching socks yet).',
+          'We all have that one friend whose concept of "5 minutes away" is measured in business days. Send this to them with zero context.',
+          '⏱️ Retention Markers:\n00:00 - The "On My Way" Text\n00:14 - The Reality in the Bedroom\n00:28 - The Arrival Excuse',
+          '👇 Pinned Question: Tag that one friend who is always running on imaginary time! 👇',
+          '#shorts #comedy #friends #relatable #thedailyEshorts'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 92,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'Nobody warned us that adulthood is just deciding what to eat every single day.',
+        duration_seconds: 30,
+        timestamp: '02:10 - 02:40',
+        title: 'The biggest scam of becoming an adult 💀',
+        hook_reason: 'Emotional consensus hook with punchy pacing that encourages continuous scrolling replays.',
+        description: formatYouTubeAlgorithmDescription(
+          '💀 Nobody prepared us for the fact that 80% of adulthood is standing in front of an open fridge sighing.',
+          'The daily existential crisis of "what are we having for dinner" unpacked in 30 seconds of pure, unadulterated reality.',
+          '⏱️ Retention Markers:\n00:00 - The Fridge Stare\n00:12 - The 45-Minute Delivery Debate\n00:24 - Eating Cereal Again',
+          '🍕 Pinned Question: What did you end up having for dinner tonight? Judge each other below! 👇',
+          '#shorts #adulthood #dailyhumor #relatable #thedailyEshorts'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 90,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'My bank account watching me buy another iced coffee:',
+        duration_seconds: 25,
+        timestamp: '03:15 - 03:40',
+        title: 'Financial decisions that make total sense in my head ☕',
+        hook_reason: 'Short, snappy, self-deprecating humor optimized for audio trending sync.',
+        description: formatYouTubeAlgorithmDescription(
+          '☕ $7 for a coffee? Emotional necessity. $2.99 delivery fee? Unacceptable robbery.',
+          'A breakdown of consumer logic that completely defies all laws of standard mathematics and economics.',
+          '⏱️ Retention Markers:\n00:00 - The Purchase Rationale\n00:09 - The Bank Notification\n00:20 - Instant Justification',
+          '💸 Pinned Question: What is your #1 completely illogical daily purchase? Tell us below! 👇',
+          '#shorts #funny #dailyvibe #humor #thedailyEshorts'
+        ),
+      },
+    ];
+  } else {
+    const safeTitle = (video && video.title ? video.title.slice(0, 35) : 'Topic');
+    clips = [
+      {
+        selected: true,
+        viral_score: 95,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'Here is why 99% of people fail to master this single principle:',
+        duration_seconds: 42,
+        timestamp: '00:15 - 00:57',
+        title: `The 60-Second Secret Behind ${safeTitle} 🔥`,
+        hook_reason: 'High retention counter-intuitive question hook within first 3 seconds.',
+        description: formatYouTubeAlgorithmDescription(
+          `⚡ The 1 critical blindspot behind ${safeTitle} that 90% of people overlook daily.`,
+          `A fast-paced empirical breakdown extracted from ${video ? video.title : 'Discussion'}. Learn the exact framework high performers use to sustain momentum.`,
+          '⏱️ Retention Markers:\n00:00 - The Overlooked Trap\n00:18 - The Core Framework\n00:35 - Actionable Rule',
+          '💬 Pinned Question: Which part of this surprised you most? Join the discussion below! 👇',
+          '#shorts #viral #growth #mindset #education'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 92,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'When researchers tested this hypothesis, the results stunned everyone.',
+        duration_seconds: 38,
+        timestamp: '01:45 - 02:23',
+        title: `What Science Proves About ${safeTitle} 🧠`,
+        hook_reason: 'Surprise outcome revelation backed by research authority.',
+        description: formatYouTubeAlgorithmDescription(
+          `🧠 When researchers tested this hypothesis, the counter-intuitive outcome stunned everyone.`,
+          `Fascinating psychological breakdown on cognitive performance and decision velocity from ${channelTitle}.`,
+          '⏱️ Retention Markers:\n00:00 - The Experiment Hook\n00:15 - The Data Revelation\n00:30 - How to Apply It',
+          '🔬 Pinned Question: Have you observed this in your daily routine? Let us know below! 👇',
+          '#shorts #science #psychology #curiosity #breakthrough'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 90,
+        media_preview_filename: 'sample_workspace.svg',
+        transcript_snippet: 'Stop doing this immediately if you want consistent momentum:',
+        duration_seconds: 35,
+        timestamp: '03:12 - 03:47',
+        title: `The 1 Mistake You Are Probably Making Daily ⚠️`,
+        hook_reason: 'Loss-aversion warning trigger that stops user scroll immediately.',
+        description: formatYouTubeAlgorithmDescription(
+          `⚠️ Stop making this daily mistake if you want to protect your focus and energy levels.`,
+          `A quick diagnostic of the most common friction points that silently derail progress before noon.`,
+          '⏱️ Retention Markers:\n00:00 - The Hidden Leak\n00:14 - Why Willpower Fails\n00:26 - The 2-Minute Fix',
+          '🚀 Pinned Question: What is your #1 non-negotiable morning habit? Tell us below! 👇',
+          '#shorts #productivity #habits #efficiency #focus'
+        ),
+      },
+      {
+        selected: true,
+        viral_score: 88,
+        media_preview_filename: 'sample_sunset.svg',
+        transcript_snippet: 'The 3-step action checklist you can apply in under 5 minutes:',
+        duration_seconds: 30,
+        timestamp: '04:30 - 05:00',
+        title: `Quick 3-Step Action Protocol ⚡`,
+        hook_reason: 'Actionable takeaway format that drives bookmarks and saves.',
+        description: formatYouTubeAlgorithmDescription(
+          `⚡ Save this short: The 3-step operational checklist you can apply in under 5 minutes.`,
+          `Actionable micro-framework designed for immediate execution without complex tools or setup.`,
+          '⏱️ Retention Markers:\n00:00 - Step 1 Protocol\n00:10 - Step 2 Implementation\n00:22 - Step 3 Review',
+          '📌 Pinned Question: Bookmark this for your weekly review! Which step will you try first? 👇',
+          '#shorts #lifehacks #checklist #actionable #productivity'
+        ),
+      },
+    ];
+  }
+
+  let aiConcept = null;
+  if (isKids) {
+    aiConcept = {
+      title: `The Enchanted Forest of Whispering Glow`,
+      lighting_style: 'Warm bioluminescent fairy-tale glow, soft pastel twilight highlights, diffuse magical radiance with dreamy depth-of-field.',
+      voiceover_style: 'Soothing, warm, bedtime story narrator voice with gentle pacing (125 wpm) and playful character inflections.',
+      script: `[HOOK 00:00-00:06]: Deep inside the Whispering Woods, a tiny glowing lantern lit up the ancient oak tree...\n[SCENE 1 00:06-00:18]: Pip the little firefly met Barnaby the bunny, who had never seen the night sky before.\n[SCENE 2 00:18-00:32]: "Do not be afraid of the dark," whispered Pip. "Because the dark is where the stars shine brightest."\n[OUTRO 00:32-00:45]: Sweet dreams little adventurers. Remember to let your own inner kindness glow bright tonight. Subscribe to TinyWonderTales!`,
+      tags: '#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #animation',
+    };
+  } else if (isComedy) {
+    aiConcept = {
+      title: `When Your Brain Thinks at 200 MPH at 3 AM`,
+      lighting_style: 'Punchy studio ring lighting with warm tungsten room accent, crisp high-contrast vertical framing.',
+      voiceover_style: 'Fast-paced, sarcastic, comedic delivery at 170 wpm with deadpan timing micro-pauses.',
+      script: `[HOOK 00:00-00:05]: My brain all day: 404 error, file not found.\n[SCENE 1 00:05-00:15]: My brain at 3:14 AM: Hey, remember that embarrassing thing you said to your 4th grade teacher in 2012?\n[SCENE 2 00:15-00:25]: Also, could penguins theoretically build a functional economy based on fish exchange?\n[CTA 00:25-00:35]: If your brain refuses to sleep like mine, hit subscribe and join the insomnia club on The Daily Shorts!`,
+      tags: '#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts',
+    };
+  } else {
+    const safeTitle = (video && video.title ? video.title.slice(0, 35) : 'Topic');
+    aiConcept = {
+      title: `Re-engineering ${safeTitle}: The Untold Protocol`,
+      lighting_style: 'Dramatic cinematic Rembrandt key lighting, dark moody teal backdrop, 3200K rim edge backlight.',
+      voiceover_style: 'Deep, authoritative, documentary cadence at 155 wpm with strategic emphasis micro-pauses.',
+      script: `[HOOK 00:00-00:05]: Most people misunderstand the core mechanism of ${safeTitle}.\n[SCENE 1 00:05-00:18]: When you examine the empirical data, an unexpected pattern emerges.\n[SCENE 2 00:18-00:35]: Top researchers discovered that applying this single structural shift changes everything.\n[CTA 00:35-00:45]: Save this video, share with someone who needs this breakthrough, and subscribe for more deep dives.`,
+      tags: '#shorts, #deepdive, #education, #productivity, #viral',
+    };
+  }
+
+  return { clips, aiConcept };
+}
+
+// Scans all monitored YouTube channels for a given theme to find breakout outlier videos
+async function scanThemeTrendingOutliers(theme) {
+  let sourceChannels = [];
+  if (theme && theme.source_accounts_json) {
+    try {
+      sourceChannels = JSON.parse(theme.source_accounts_json);
+    } catch (e) {
+      sourceChannels = [];
+    }
+  }
+
+  if (!sourceChannels || sourceChannels.length === 0) {
+    const isKids = ((theme?.theme_name || '') + ' ' + (theme?.base_description || '')).toLowerCase().match(/kid|wonder|tale|story|bedtime|nursery/);
+    if (isKids) {
+      sourceChannels = ['@cocomelon', '@supersimple', '@brightlystorytime'];
+    } else {
+      sourceChannels = ['@mrbeastshorts', '@dailycomedy', '@viralscroll', '@scumbagdad'];
+    }
+  }
+
+  const allVideos = [];
+
+  for (const query of sourceChannels) {
+    try {
+      const chData = await fetchYouTubeData(query);
+      if (chData && chData.top_videos) {
+        chData.top_videos.forEach((vid, vIdx) => {
+          const isTopOutlier = vIdx === 0;
+          const outlierFactor = isTopOutlier ? (4.2 + (Math.random() * 3.6)).toFixed(1) : (2.1 + (Math.random() * 2.2)).toFixed(1);
+          const engRate = (8.5 + (Math.random() * 7.5)).toFixed(1) + '%';
+          
+          let hook = 'High curiosity pattern interrupt in first 3 seconds with emotional twist.';
+          let tags = '#shorts, #viral, #trending';
+          const titleLower = (vid.title + ' ' + chData.channel_title).toLowerCase();
+
+          if (titleLower.match(/kid|story|bedtime|tale|song|nursery|pip/)) {
+            hook = 'Vibrant magical visual transition in first 3s followed by gentle soothing lullaby resolution (94% loop retention).';
+            tags = '#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #animation';
+          } else if (titleLower.match(/comedy|joke|funny|relatable|short|daily|laugh/)) {
+            hook = 'Instant relatable micro-conflict (0-3s) with deadpan unexpected twist, driving high shareability.';
+            tags = '#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts';
+          } else {
+            hook = 'Counter-intuitive truth hook addressing audience blindspot, followed by clear 3-step solution.';
+            tags = '#shorts, #education, #mindset, #lifehacks, #growth';
+          }
+
+          allVideos.push({
+            id: vid.id,
+            title: vid.title,
+            channel_title: chData.channel_title || query,
+            subscribers: chData.subscribers || '1.2M',
+            views: vid.views || '1.4M',
+            likes: vid.likes || '95K',
+            duration: vid.duration || '0:45',
+            thumbnail_url: vid.thumbnail_url,
+            summary: vid.summary,
+            outlier_multiplier: `${outlierFactor}x`,
+            outlier_score: parseFloat(outlierFactor),
+            engagement_rate: engRate,
+            momentum: parseFloat(outlierFactor) >= 4.0 ? 'Explosive 🔥' : (parseFloat(outlierFactor) >= 2.5 ? 'High Velocity ⚡' : 'Rising Trend 📈'),
+            retention_hook: hook,
+            viral_tags: tags,
+          });
+        });
+      }
+    } catch (err) {
+      console.error('Error scanning channel for trending:', query, err);
+    }
+  }
+
+  // Sort by outlier score descending
+  allVideos.sort((a, b) => b.outlier_score - a.outlier_score);
+
+  const maxOutlier = allVideos.length > 0 ? Math.max(...allVideos.map((v) => v.outlier_score)).toFixed(1) : '5.8';
+  const maxEng = allVideos.length > 0 ? allVideos[0].engagement_rate : '14.2%';
+  const isKidsTheme = ((theme?.theme_name || '')).toLowerCase().match(/kid|wonder|tale|story|bedtime/);
+  const optDuration = isKidsTheme ? '35s - 50s' : '22s - 38s';
+  const topKeywords = isKidsTheme ? 'Kindness, bedtime magic, animal courage, toddler adventures' : 'Relatable work, daily awkwardness, phone habits, unexpected twists';
+
+  return {
+    source_channels: sourceChannels,
+    trending_videos: allVideos,
+    analytics_summary: {
+      max_outlier: maxOutlier,
+      max_engagement: maxEng,
+      optimal_duration: optDuration,
+      top_keywords: topKeywords,
+    },
+  };
+}
+
+// Analyze Routes
+app.get('/analyze', async (req, res) => {
+  // Support pre-loading from query parameters (e.g. from Trending Outliers page)
+  if (req.query.input) {
+    const input = req.query.input.trim();
+    try {
+      const channelData = await fetchYouTubeData(input);
+      req.session.analyze_input = input;
+      req.session.analyzed_channel = channelData;
+      if (channelData.top_videos && channelData.top_videos.length > 0) {
+        const topVid = channelData.top_videos[0];
+        req.session.selected_video = topVid;
+        req.session.selected_video_channel = channelData.channel_title;
+        const { clips, aiConcept } = buildViralClipsAndAiConcept(topVid, channelData.channel_title);
+        req.session.clips_data = clips;
+        req.session.ai_concept = aiConcept;
+      }
+      if (req.query.strategy) {
+        req.session.active_strategy = req.query.strategy;
+      }
+    } catch (e) {
+      console.error('Error pre-fetching from query param:', e);
+    }
+  }
+
+  const currentInput = req.session.analyze_input || '';
+  const analyzedChannel = req.session.analyzed_channel || null;
+  const selectedVideo = req.session.selected_video || (analyzedChannel && analyzedChannel.top_videos ? analyzedChannel.top_videos[0] : null);
+  const selectedChannelTitle = req.session.selected_video_channel || (analyzedChannel ? analyzedChannel.channel_title : '');
+  const activeStrategy = req.session.active_strategy || 'short_clips';
+  const clipsData = req.session.clips_data || [];
+  const aiConcept = req.session.ai_concept || null;
+
+  res.render('analyze', {
+    title: 'Channel & Video Analyzer',
+    current_input: currentInput,
+    analyzed_channel: analyzedChannel,
+    selected_video: selectedVideo,
+    selected_video_channel: selectedChannelTitle,
+    active_strategy: activeStrategy,
+    clips_data: clipsData,
+    ai_concept: aiConcept,
+    available_accounts: accounts,
+  });
+});
+
+// Trending Outliers & High-Engagement Intelligence Route
+app.get('/trending', async (req, res) => {
+  const themeId = req.query.theme_id ? parseInt(req.query.theme_id, 10) : (approvedThemes[0] ? approvedThemes[0].id : null);
+  const selectedTheme = approvedThemes.find((t) => t.id === themeId) || approvedThemes[0] || null;
+
+  let scanResult = {
+    source_channels: [],
+    trending_videos: [],
+    analytics_summary: { max_outlier: '4.8', max_engagement: '11.5%', optimal_duration: '30s - 45s', top_keywords: 'Shorts, Viral, Trending' },
+  };
+
+  if (selectedTheme) {
+    const acc = accounts.find((a) => a.id === selectedTheme.instagram_account_id);
+    selectedTheme.target_account = acc || null;
+    scanResult = await scanThemeTrendingOutliers(selectedTheme);
+  }
+
+  res.render('theme_trending', {
+    title: 'Trending & High-Engagement Outliers',
+    themes: approvedThemes,
+    selected_theme: selectedTheme,
+    source_channels: scanResult.source_channels,
+    trending_videos: scanResult.trending_videos,
+    analytics_summary: scanResult.analytics_summary,
+  });
+});
+
+app.get('/themes/:id/trending', (req, res) => {
+  res.redirect(`/trending?theme_id=${req.params.id}`);
+});
+
+app.post('/themes/:id/sources/add_link', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  const rawInput = (req.body.channel_input || '').trim();
+  if (rawInput) {
+    let cleanHandle = rawInput;
+    if (cleanHandle.includes('youtube.com/')) {
+      const match = cleanHandle.match(/@([a-zA-Z0-9_\-]+)/);
+      if (match) {
+        cleanHandle = `@${match[1]}`;
+      } else {
+        cleanHandle = cleanHandle.replace(/.*youtube\.com\//, '@').replace(/\/$/, '');
+      }
+    }
+    if (!cleanHandle.startsWith('@') && !cleanHandle.startsWith('http')) {
+      cleanHandle = `@${cleanHandle}`;
+    }
+
+    let sources = [];
+    if (theme.source_accounts_json) {
+      try {
+        sources = JSON.parse(theme.source_accounts_json);
+      } catch (e) {
+        sources = [];
+      }
+    }
+    if (!sources.includes(cleanHandle)) {
+      sources.push(cleanHandle);
+      theme.source_accounts_json = JSON.stringify(sources);
+      req.flash('success', `Added monitored channel '${cleanHandle}' to theme! Live outlier scan updated.`);
+    } else {
+      req.flash('info', `Channel '${cleanHandle}' is already being monitored for this theme.`);
+    }
+  }
+
+  res.redirect(`/themes/${id}/trending`);
+});
+
+app.post('/themes/:id/sources/remove_link', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  const toRemove = (req.body.channel_to_remove || '').trim();
+  let sources = [];
+  if (theme.source_accounts_json) {
+    try {
+      sources = JSON.parse(theme.source_accounts_json);
+    } catch (e) {
+      sources = [];
+    }
+  }
+  sources = sources.filter((s) => s.toLowerCase() !== toRemove.toLowerCase());
+  theme.source_accounts_json = JSON.stringify(sources);
+
+  req.flash('success', `Removed channel '${toRemove}' from theme monitored sources.`);
+  res.redirect(`/themes/${id}/trending`);
+});
+
+app.post('/themes/:id/switch_strategy', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  const newStrategy = req.body.new_strategy || (theme.strategy === 'ai_video' ? 'short_clips' : 'ai_video');
+  theme.strategy = newStrategy;
+  const strategyName = newStrategy === 'ai_video' ? 'Similar AI Video Mode' : 'Short Clips Mode (3-4 Extracts)';
+  req.flash('success', `Theme '${theme.theme_name}' strategy switched to ${strategyName}!`);
+
+  const referer = req.headers.referer || '/themes';
+  res.redirect(referer);
+});
+
+// Free 24/7 Always-On Deployment Walkthrough Page
+app.get('/deploy-guide', (req, res) => {
+  res.render('deploy_guide', {
+    title: 'Free 24/7 Always-On Cloud Deployment Guide',
+  });
+});
+
+app.post('/analyze/fetch', async (req, res) => {
+  const input = (req.body.channel_or_video_input || '').trim();
+  if (!input) {
+    req.flash('danger', 'Please enter a YouTube channel name, handle, or video link.');
+    return res.redirect('/analyze');
+  }
+
+  try {
+    const channelData = await fetchYouTubeData(input);
+    req.session.analyze_input = input;
+    req.session.analyzed_channel = channelData;
+
+    if (channelData.top_videos && channelData.top_videos.length > 0) {
+      const topVid = channelData.top_videos[0];
+      req.session.selected_video = topVid;
+      req.session.selected_video_channel = channelData.channel_title;
+
+      const { clips, aiConcept } = buildViralClipsAndAiConcept(topVid, channelData.channel_title);
+      req.session.clips_data = clips;
+      req.session.ai_concept = aiConcept;
+    }
+
+    req.flash('success', `Analyzed '${channelData.channel_title}' successfully with ${channelData.top_videos.length} top-viewed videos.`);
+  } catch (err) {
+    console.error('Error in /analyze/fetch:', err);
+    req.flash('danger', 'Error analyzing YouTube source. Please try another query.');
+  }
+
+  res.redirect('/analyze#strategy-studio');
+});
+
+app.post('/analyze/select_video', (req, res) => {
+  try {
+    const videoData = JSON.parse(req.body.video_data_json || '{}');
+    const channelTitle = req.body.channel_title || 'YouTube Channel';
+
+    req.session.selected_video = videoData;
+    req.session.selected_video_channel = channelTitle;
+
+    const { clips, aiConcept } = buildViralClipsAndAiConcept(videoData, channelTitle);
+    req.session.clips_data = clips;
+    req.session.ai_concept = aiConcept;
+
+    req.flash('info', `Selected video: "${videoData.title}". Generation strategies updated.`);
+  } catch (err) {
+    console.error('Error selecting video:', err);
+    req.flash('warning', 'Could not select video.');
+  }
+
+  res.redirect('/analyze#strategy-studio');
+});
+
+app.post('/analyze/confirm_clips', (req, res) => {
+  const targetChannelId = parseInt(req.body.target_channel_id, 10) || 1;
+  const themeName = req.body.theme_name || `Shorts: ${req.body.video_title || 'Viral Clips'}`;
+  const videoTitle = req.body.video_title || '';
+  const channelTitle = req.body.channel_title || '';
+  const videoThumbnail = req.body.video_thumbnail || '';
+
+  const dummyMedia = createDummyMediaFile(themeName, 'video', 35);
+  const newTheme = {
+    id: nextThemeId++,
+    theme_name: themeName,
+    base_description: `Curated high-retention vertical Shorts clips extracted from: ${videoTitle} (${channelTitle})`,
+    base_hashtags: '#shorts, #youtube, #viral, #trending',
+    base_media_filename: dummyMedia,
+    content_type_preference: 'video',
+    strategy: 'short_clips',
+    reel_duration_seconds: 35,
+    is_active: true,
+    created_at: new Date(),
+    instagram_account_id: targetChannelId,
+    generation_mode: 'short_clips_extraction',
+    source_accounts_json: JSON.stringify([channelTitle]),
+    sourcing_strategy: 'viral_clips',
+  };
+  approvedThemes.push(newTheme);
+
+  let scheduledCount = 0;
+  for (let idx = 0; idx < 4; idx++) {
+    const isIncluded = req.body[`clip_${idx}_include`] === 'true';
+    if (isIncluded) {
+      const clipTitle = req.body[`clip_${idx}_title`] || `${themeName} - Part ${idx + 1}`;
+      const timestamp = req.body[`clip_${idx}_timestamp`] || '00:00 - 00:35';
+      const duration = parseInt(req.body[`clip_${idx}_duration`], 10) || 35;
+      const desc = req.body[`clip_${idx}_description`] || '';
+
+      // Extract hyper-targeted hashtags or generate algorithm-compliant tags
+      const tagMatches = desc.match(/#[a-zA-Z0-9_]+/g);
+      const hashtags = tagMatches && tagMatches.length > 0 
+        ? tagMatches.slice(0, 5).join(' ') 
+        : (targetChannelId === 1 ? '#shorts #tinywondertales #kidsstories #bedtimestory' : '#shorts #thedailyshorts #comedy #relatable');
+
+      const clipPost = {
+        id: nextPostId++,
+        theme: clipTitle,
+        description: desc,
+        hashtags: hashtags,
+        image_filename: dummyMedia,
+        media_type: 'video',
+        post_type: 'short_clips',
+        clip_timestamp: timestamp,
+        viral_score: 90 + Math.floor(Math.random() * 8),
+        duration_seconds: duration,
+        scheduled_time: new Date(Date.now() + (scheduledCount + 1) * 3 * 3600000),
+        posted_at: null,
+        status: 'scheduled',
+        created_at: new Date(),
+        upload_error_message: null,
+        approved_theme_id: newTheme.id,
+        original_source_url: videoThumbnail || null,
+        retrieved_from_account: channelTitle,
+      };
+      posts.push(clipPost);
+      scheduledCount++;
+    }
+  }
+
+  req.flash('success', `Theme created and ${scheduledCount} viral Shorts clips added to your publishing queue!`);
+  res.redirect('/all_posts');
+});
+
+app.post('/analyze/confirm_ai_video', (req, res) => {
+  const targetChannelId = parseInt(req.body.target_channel_id, 10) || 1;
+  const themeName = req.body.theme_name || 'AI Video Strategy';
+  const videoTitle = req.body.video_title || themeName;
+  const channelTitle = req.body.channel_title || '';
+  const lightingNotes = req.body.ai_lighting_notes || '';
+  const voiceoverStyle = req.body.ai_voiceover_style || '';
+  const voiceoverScript = req.body.ai_voiceover_script || '';
+  const tags = req.body.video_tags || '#ai #video #shorts';
+
+  const dummyMedia = createDummyMediaFile(themeName, 'video', 45);
+  const newTheme = {
+    id: nextThemeId++,
+    theme_name: themeName,
+    base_description: `AI video generated with matched lighting and tone from ${channelTitle}: ${lightingNotes.slice(0, 100)}...`,
+    base_hashtags: tags,
+    base_media_filename: dummyMedia,
+    content_type_preference: 'video',
+    strategy: 'ai_video',
+    ai_lighting_profile: lightingNotes,
+    ai_voiceover_style: voiceoverStyle,
+    reel_duration_seconds: 45,
+    is_active: true,
+    created_at: new Date(),
+    instagram_account_id: targetChannelId,
+    generation_mode: 'ai_video_concept',
+    source_accounts_json: JSON.stringify([channelTitle]),
+    sourcing_strategy: 'ai_video',
+  };
+  approvedThemes.push(newTheme);
+
+  const aiPost = {
+    id: nextPostId++,
+    theme: videoTitle,
+    description: `[AI Video Concept]\nLighting: ${lightingNotes}\nVoiceover: ${voiceoverStyle}\n\nFull script ready for rendering.`,
+    hashtags: tags,
+    image_filename: dummyMedia,
+    media_type: 'video',
+    post_type: 'ai_video',
+    clip_timestamp: '00:00 - 00:45',
+    viral_score: 95,
+    ai_lighting_notes: lightingNotes,
+    ai_voiceover_script: voiceoverScript,
+    duration_seconds: 45,
+    scheduled_time: new Date(Date.now() + 4 * 3600000),
+    posted_at: null,
+    status: 'scheduled',
+    created_at: new Date(),
+    upload_error_message: null,
+    approved_theme_id: newTheme.id,
+    original_source_url: null,
+    retrieved_from_account: channelTitle,
+  };
+  posts.push(aiPost);
+
+  req.flash('success', `AI Video Theme created and video scheduled for rendering & upload!`);
+  res.redirect('/all_posts');
+});
+
+// Generate Page (GET)
+app.get('/generate', (req, res) => {
+  const mode = req.query.mode || 'generate_ai_visual';
+  const generatedData = req.session.generated_content || null;
+  const curationSetupActive = req.session.curation_setup_active || false;
+
+  res.render('generate', {
+    title: 'Generate or Curate Content',
+    active_mode: mode,
+    available_accounts: accounts,
+    generated_data: generatedData,
+    curation_setup_active: curationSetupActive,
+  });
+});
+
+// Generate Page (POST)
+app.post('/generate', upload.single('image_upload'), async (req, res) => {
+  const formMode = req.body.form_mode;
+
+  if (formMode === 'generate_ai_visual') {
+    const themeName = req.body.theme || (req.session.generated_content ? req.session.generated_content.original_theme : 'Creative Concept');
+    const description = req.body.description || (req.session.generated_content ? req.session.generated_content.original_description : '');
+    const hashtags = req.body.hashtags || (req.session.generated_content ? req.session.generated_content.original_hashtags : '');
+    const contentTypePref = req.body.content_type_preference || (req.session.generated_content ? req.session.generated_content.original_content_type_preference : 'image');
+    const reelDuration = req.body.reel_duration_seconds ? parseInt(req.body.reel_duration_seconds, 10) : (contentTypePref === 'video' ? 30 : null);
+    const scheduleTime = req.body.schedule_time || (req.session.generated_content ? req.session.generated_content.original_schedule_time : '');
+    const instaLink = req.body.insta_link || (req.session.generated_content ? req.session.generated_content.original_insta_link : '');
+    const suggestions = req.body.suggestions || '';
+
+    let baseMediaFilename = req.file ? req.file.filename : null;
+    if (!baseMediaFilename && req.session.generated_content && req.session.generated_content.base_media_filename) {
+      baseMediaFilename = req.session.generated_content.base_media_filename;
+    }
+    if (!baseMediaFilename) {
+      baseMediaFilename = createDummyMediaFile(themeName, contentTypePref, reelDuration);
+    }
+
+    const aiResult = await generateGeminiContent(themeName, description, hashtags, contentTypePref, suggestions);
+
+    const history = req.session.generated_content && req.session.generated_content.suggestions_history ? [...req.session.generated_content.suggestions_history] : [];
+    if (suggestions) history.push(suggestions);
+
+    req.session.generated_content = {
+      caption: aiResult.caption,
+      hashtags: aiResult.hashtags,
+      base_media_filename: baseMediaFilename,
+      actual_media_type: contentTypePref,
+      actual_duration: reelDuration,
+      original_theme: themeName,
+      original_description: description,
+      original_hashtags: hashtags,
+      original_content_type_preference: contentTypePref,
+      original_reel_duration_seconds: reelDuration,
+      original_schedule_time: scheduleTime,
+      original_insta_link: instaLink,
+      suggestions_history: history,
+    };
+    req.session.curation_setup_active = false;
+
+    req.flash('success', 'Content idea generated! Review below.');
+    return res.redirect('/generate?mode=generate_ai_visual');
+  }
+
+  if (formMode === 'generate_ai_visual_approval') {
+    const selectedAccountId = parseInt(req.body.selected_account_id_for_theme, 10);
+    const genData = req.session.generated_content;
+    if (!genData) {
+      req.flash('danger', 'No generated content found in session to approve.');
+      return res.redirect('/generate');
+    }
+
+    const newTheme = {
+      id: nextThemeId++,
+      theme_name: genData.original_theme,
+      base_description: genData.caption,
+      base_hashtags: genData.hashtags,
+      base_media_filename: genData.base_media_filename,
+      content_type_preference: genData.actual_media_type,
+      reel_duration_seconds: genData.actual_duration,
+      is_active: true,
+      created_at: new Date(),
+      instagram_account_id: selectedAccountId,
+      generation_mode: 'ai_visual',
+      source_accounts_json: null,
+      sourcing_strategy: 'random_recent',
+    };
+    approvedThemes.push(newTheme);
+
+    // If a schedule time was provided, create the initial post
+    let initialPostCreated = false;
+    if (genData.original_schedule_time) {
+      const newPost = {
+        id: nextPostId++,
+        theme: genData.original_theme,
+        description: genData.caption,
+        hashtags: genData.hashtags,
+        image_filename: genData.base_media_filename,
+        media_type: genData.actual_media_type,
+        duration_seconds: genData.actual_duration,
+        scheduled_time: new Date(genData.original_schedule_time),
+        posted_at: null,
+        status: 'pending_approval',
+        created_at: new Date(),
+        upload_error_message: null,
+        approved_theme_id: newTheme.id,
+        original_source_url: genData.original_insta_link || null,
+        retrieved_from_account: null,
+      };
+      posts.push(newPost);
+      initialPostCreated = true;
+    }
+
+    delete req.session.generated_content;
+    delete req.session.curation_setup_active;
+
+    req.flash(
+      'success',
+      `AI Theme '${newTheme.theme_name}' approved and saved! ${initialPostCreated ? 'Initial post scheduled.' : 'Configure its posting schedule next.'}`
+    );
+    return res.redirect(`/themes/${newTheme.id}/configure_schedule`);
+  }
+
+  if (formMode === 'curate_setup') {
+    const targetAccountId = parseInt(req.body.target_account_id, 10);
+    const themeName = req.body.theme_name;
+    const sourceAccountsInput = req.body.source_accounts || '';
+    const baseDescription = req.body.base_description || '';
+    const baseHashtags = req.body.base_hashtags || '';
+    const contentTypePref = req.body.content_type_preference || 'image';
+    const reelDuration = req.body.reel_duration_seconds ? parseInt(req.body.reel_duration_seconds, 10) : (contentTypePref === 'video' ? 30 : null);
+
+    const parsedSources = parseSourceInputs(sourceAccountsInput);
+    const targetAcc = accounts.find((a) => a.id === targetAccountId);
+    const defaultSources = targetAcc && targetAcc.default_curation_sources_json ? JSON.parse(targetAcc.default_curation_sources_json) : [];
+
+    const finalSources = parsedSources.length > 0 ? parsedSources : defaultSources;
+    if (finalSources.length === 0) {
+      req.flash('warning', 'Please provide at least one source account or set default sources for the target account.');
+      return res.redirect('/generate?mode=curate_from_sources');
+    }
+
+    const dummyMedia = createDummyMediaFile(themeName, contentTypePref, reelDuration);
+
+    const newCurationTheme = {
+      id: nextThemeId++,
+      theme_name: themeName,
+      base_description: baseDescription || `Curated high-engagement content for ${themeName}`,
+      base_hashtags: baseHashtags || '#curated, #instagramgrowth, #trending',
+      base_media_filename: dummyMedia,
+      content_type_preference: contentTypePref,
+      reel_duration_seconds: reelDuration,
+      is_active: true,
+      created_at: new Date(),
+      instagram_account_id: targetAccountId,
+      generation_mode: 'curation',
+      source_accounts_json: JSON.stringify(finalSources),
+      sourcing_strategy: 'random_recent',
+    };
+    approvedThemes.push(newCurationTheme);
+
+    req.flash('success', `Curation Theme '${themeName}' created successfully! Configure its schedule next.`);
+    return res.redirect(`/themes/${newCurationTheme.id}/details`);
+  }
+
+  req.flash('warning', 'Action not recognized.');
+  res.redirect('/generate');
+});
+
+// Themes Page
+app.get('/themes', (req, res) => {
+  const populatedThemes = approvedThemes.map((t) => {
+    const acc = accounts.find((a) => a.id === t.instagram_account_id);
+    let sources = [];
+    if (t.source_accounts_json) {
+      try {
+        sources = JSON.parse(t.source_accounts_json);
+      } catch (e) {
+        sources = [];
+      }
+    }
+    return {
+      ...t,
+      created_at_formatted: formatDate(t.created_at),
+      instagram_account: acc || null,
+      youtube_channel: acc || null,
+      source_accounts: sources,
+    };
+  });
+
+  res.render('all_themes', {
+    title: 'Approved Themes',
+    themes: populatedThemes,
+  });
+});
+
+// Toggle Theme Active Status
+app.post('/themes/:id/toggle_active', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (theme) {
+    theme.is_active = !theme.is_active;
+    req.flash('success', `Theme '${theme.theme_name}' is now ${theme.is_active ? 'Active' : 'Paused'}.`);
+  }
+  res.redirect('/themes');
+});
+
+// Theme Schedule Configuration
+app.get('/themes/:id/configure_schedule', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  const schedule = themeSchedules.find((s) => s.approved_theme_id === theme.id);
+
+  res.render('configure_schedule', {
+    title: `Configure Schedule for ${theme.theme_name}`,
+    theme,
+    schedule: schedule || null,
+  });
+});
+
+app.post('/themes/:id/configure_schedule', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  const postsPerDay = parseInt(req.body.posts_per_day, 10) || 1;
+  const timeSlots = [];
+  for (let i = 1; i <= postsPerDay; i++) {
+    const time = req.body[`time_slot_${i}`] || '09:00';
+    const mediaPref = req.body[`media_pref_slot_${i}`] || 'theme_default';
+    timeSlots.push({ time, media_pref: mediaPref });
+  }
+
+  let schedule = themeSchedules.find((s) => s.approved_theme_id === theme.id);
+  if (schedule) {
+    schedule.posts_per_day = postsPerDay;
+    schedule.scheduled_times_json = JSON.stringify(timeSlots);
+    schedule.is_active = true;
+    schedule.updated_at = new Date();
+  } else {
+    schedule = {
+      id: nextScheduleId++,
+      approved_theme_id: theme.id,
+      posts_per_day: postsPerDay,
+      scheduled_times_json: JSON.stringify(timeSlots),
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+    themeSchedules.push(schedule);
+  }
+
+  req.flash('success', `Schedule for theme '${theme.theme_name}' saved successfully!`);
+  res.redirect('/themes');
+});
+
+// Theme Details Configuration
+app.get('/themes/:id/details', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  let sourceAccountsList = [];
+  if (theme.source_accounts_json) {
+    try {
+      sourceAccountsList = JSON.parse(theme.source_accounts_json);
+    } catch (e) {
+      sourceAccountsList = [];
+    }
+  }
+  theme.source_accounts = sourceAccountsList;
+
+  res.render('configure_theme_details', {
+    title: 'Configure Theme Details',
+    theme,
+    source_accounts_display: sourceAccountsList.join(', '),
+  });
+});
+
+app.post('/themes/:id/details', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const theme = approvedThemes.find((t) => t.id === id);
+  if (!theme) {
+    req.flash('danger', 'Theme not found.');
+    return res.redirect('/themes');
+  }
+
+  theme.theme_name = req.body.theme_name || theme.theme_name;
+  theme.generation_mode = req.body.generation_mode || theme.generation_mode;
+
+  if (req.body.source_accounts_input !== undefined) {
+    const raw = req.body.source_accounts_input || '';
+    const parsed = parseSourceInputs(raw);
+    theme.source_accounts_json = JSON.stringify(parsed);
+  } else if (req.body.source_accounts !== undefined) {
+    const sources = parseSourceInputs(req.body.source_accounts || '');
+    theme.source_accounts_json = JSON.stringify(sources);
+  }
+
+  if (req.body.ai_lighting_profile) {
+    theme.ai_lighting_profile = req.body.ai_lighting_profile;
+  }
+  if (req.body.ai_voiceover_style) {
+    theme.ai_voiceover_style = req.body.ai_voiceover_style;
+  }
+  if (req.body.base_hashtags) {
+    theme.base_hashtags = req.body.base_hashtags;
+  }
+
+  req.flash('success', `Theme '${theme.theme_name}' details updated.`);
+  res.redirect(`/themes/${theme.id}/details`);
+});
+
+// Accounts Management
+app.get('/accounts', (req, res) => {
+  const formattedAccounts = accounts.map((a) => ({
+    ...a,
+    added_at_formatted: formatDate(a.added_at),
+  }));
+
+  res.render('manage_accounts', {
+    title: 'Manage Instagram Accounts',
+    accounts: formattedAccounts,
+  });
+});
+
+app.post('/accounts', (req, res) => {
+  const username = (req.body.username || '').trim().replace(/^@/, '');
+  const channelTitle = (req.body.channel_title || '').trim() || `@${username}`;
+  const defaultPrivacy = req.body.default_privacy || 'public';
+  const notes = req.body.notes || '';
+
+  if (!username) {
+    req.flash('danger', 'Channel handle or ID is required.');
+    return res.redirect('/accounts');
+  }
+
+  if (accounts.some((a) => a.username.toLowerCase() === username.toLowerCase())) {
+    req.flash('warning', 'A YouTube channel with this handle already exists in the system.');
+    return res.redirect('/accounts');
+  }
+
+  const newAccount = {
+    id: nextAccountId++,
+    channel_title: channelTitle,
+    username,
+    status: 'active_session',
+    notes,
+    default_privacy: defaultPrivacy,
+    subscribers: '0',
+    added_at: new Date(),
+    default_curation_sources_json: JSON.stringify([]),
+  };
+  accounts.push(newAccount);
+
+  req.flash('success', `YouTube channel '${channelTitle}' (@${username}) connected successfully.`);
+  res.redirect('/accounts');
+});
+
+app.post('/accounts/:id/delete', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const hasThemes = approvedThemes.some((t) => t.instagram_account_id === id);
+  if (hasThemes) {
+    req.flash('danger', 'Cannot delete account as it has themes linked. Reassign or delete themes first.');
+    return res.redirect('/accounts');
+  }
+
+  const idx = accounts.findIndex((a) => a.id === id);
+  if (idx !== -1) {
+    const deleted = accounts.splice(idx, 1)[0];
+    req.flash('success', `Account '@${deleted.username}' deleted.`);
+  }
+  res.redirect('/accounts');
+});
+
+// Account Curation Sources
+app.get('/accounts/:id/sources', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const account = accounts.find((a) => a.id === id);
+  if (!account) {
+    req.flash('danger', 'Account not found.');
+    return res.redirect('/accounts');
+  }
+
+  let currentSources = [];
+  if (account.default_curation_sources_json) {
+    try {
+      currentSources = JSON.parse(account.default_curation_sources_json);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  res.render('manage_target_sources', {
+    title: `Sources for @${account.username}`,
+    target_account: account,
+    current_sources: currentSources,
+  });
+});
+
+app.post('/accounts/:id/sources/add', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const account = accounts.find((a) => a.id === id);
+  if (!account) {
+    req.flash('danger', 'Account not found.');
+    return res.redirect('/accounts');
+  }
+
+  const inputs = req.body.source_account_inputs;
+  const parsed = parseSourceInputs(inputs);
+  if (parsed.length === 0) {
+    req.flash('warning', 'No valid usernames or links provided.');
+    return res.redirect(`/accounts/${id}/sources`);
+  }
+
+  let list = [];
+  if (account.default_curation_sources_json) {
+    try {
+      list = JSON.parse(account.default_curation_sources_json);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  for (const user of parsed) {
+    if (!list.includes(user)) {
+      list.push(user);
+    }
+  }
+
+  account.default_curation_sources_json = JSON.stringify(list);
+  req.flash('success', `Default sources updated for @${account.username}.`);
+  res.redirect(`/accounts/${id}/sources`);
+});
+
+app.post('/accounts/:id/sources/remove', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const account = accounts.find((a) => a.id === id);
+  if (!account) {
+    req.flash('danger', 'Account not found.');
+    return res.redirect('/accounts');
+  }
+
+  const usernameToRemove = req.body.source_username_to_remove;
+  let list = [];
+  if (account.default_curation_sources_json) {
+    try {
+      list = JSON.parse(account.default_curation_sources_json);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  list = list.filter((u) => u !== usernameToRemove);
+  account.default_curation_sources_json = JSON.stringify(list);
+
+  req.flash('success', `Source '@${usernameToRemove}' removed.`);
+  res.redirect(`/accounts/${id}/sources`);
+});
+
+// Automation Settings & Schedule Page
+app.get('/schedule', (req, res) => {
+  const today = new Date();
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  const scheduledToday = posts
+    .filter((p) => {
+      if (!p.scheduled_time) return false;
+      const st = new Date(p.scheduled_time);
+      return st >= startOfDay && st <= endOfDay;
+    })
+    .map((p) => ({
+      ...p,
+      scheduled_time_formatted: formatDate(p.scheduled_time),
+    }));
+
+  res.render('schedule', {
+    title: 'Automation Schedule Settings',
+    scheduled_posts: scheduledToday,
+  });
+});
+
+app.post('/schedule', (req, res) => {
+  const quota = parseInt(req.body.daily_quota, 10) || 1;
+  req.flash('success', `Settings updated: Daily quota set to ${quota}. Automation check triggered.`);
+  res.redirect('/schedule');
+});
+
+// Listen on port 3000 and 0.0.0.0
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`YouTube Automation Studio running on http://0.0.0.0:${PORT}`);
+  });
+}
+
+export default app;

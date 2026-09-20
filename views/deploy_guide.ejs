@@ -1,0 +1,291 @@
+<%- include('partials/header') %>
+
+<div class="mt-2 mb-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 bg-success-subtle border border-success rounded-pill text-success fw-bold small mb-2">
+                <i class="bi bi-shield-check"></i> Real-World Production &bull; GitHub &bull; Vercel &bull; Cloud Run &bull; 100k Growth Engine
+            </div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-rocket-takeoff-fill text-danger me-2"></i>Live Deployment &amp; Real-World YouTube Growth Playbook</h2>
+            <p class="text-muted mb-0">Complete handholding guide to export to GitHub, go live on Vercel or Cloud Run, and scale <strong>@thedailyE-shorts</strong> &amp; <strong>@tiinywondertales</strong> to 100K subscribers.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/trending" class="btn btn-outline-danger fw-bold"><i class="bi bi-fire me-1"></i> Outlier Scanner</a>
+            <a href="/dashboard" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Active Monitored Channels Banner -->
+    <div class="yt-card p-3 mb-4 bg-light border">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-danger p-2 fs-6"><i class="bi bi-youtube"></i></span>
+                <div>
+                    <span class="small text-muted fw-bold text-uppercase">Configured Production Channels:</span>
+                    <div class="d-flex flex-wrap gap-2 mt-1">
+                        <span class="badge bg-white text-dark border px-3 py-2">
+                            <i class="bi bi-lightning-fill text-warning me-1"></i><strong>The Daily Shorts dot com</strong> <code>@thedailyE-shorts</code>
+                        </span>
+                        <span class="badge bg-white text-dark border px-3 py-2">
+                            <i class="bi bi-stars text-primary me-1"></i><strong>TinyWonderTales</strong> <code>@tiinywondertales</code>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <a href="/themes" class="btn btn-sm btn-dark">Manage Themes &amp; Sources <i class="bi bi-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <!-- Section 1: Exporting to GitHub -->
+    <div class="yt-card p-4 mb-4 border-start border-4 border-dark">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-github fs-3 text-dark"></i>
+            <div>
+                <h4 class="fw-bold mb-0">Part 1: How to Export this Project to a New GitHub Repository</h4>
+                <small class="text-muted">Two easy options: 1-Click UI Export or Terminal Git Push</small>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-danger rounded-circle p-2 px-3 fw-bold">Option A</span>
+                        <h6 class="fw-bold mb-0 text-dark">1-Click Export via AI Studio Menu (Recommended)</h6>
+                    </div>
+                    <ol class="small text-muted ps-3 mb-3">
+                        <li class="mb-2">Look at the <strong>top-right header of Google AI Studio</strong> (next to the Share/Settings menu).</li>
+                        <li class="mb-2">Click <strong>Settings &rarr; Export to GitHub</strong> (or <strong>Download as ZIP</strong>).</li>
+                        <li class="mb-2">Sign in to your GitHub account and authorize Google AI Studio.</li>
+                        <li class="mb-2">Name your new repository (e.g., <code>youtube-shorts-automation-studio</code>) and click <strong>Create Repository</strong>.</li>
+                        <li>AI Studio will automatically push all clean source files, schemas, and configurations directly to your GitHub account!</li>
+                    </ol>
+                    <div class="p-2 bg-success bg-opacity-10 text-success rounded border border-success small">
+                        <i class="bi bi-check-circle-fill me-1"></i> Instant sync &mdash; no terminal or command-line setup needed.
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-dark rounded-circle p-2 px-3 fw-bold">Option B</span>
+                        <h6 class="fw-bold mb-0 text-dark">Manual Git Push via Terminal / CLI</h6>
+                    </div>
+                    <p class="small text-muted mb-2">
+                        If you have downloaded the code or are working in a local terminal:
+                    </p>
+                    <div class="bg-dark text-white p-3 rounded font-monospace small mb-2 overflow-x-auto">
+                        <div class="text-secondary"># 1. Create a new empty repo on github.com/new</div>
+                        <div class="text-secondary"># 2. In your project directory:</div>
+                        git init<br>
+                        git add .<br>
+                        git commit -m "feat: initial YouTube automation studio"<br>
+                        git branch -M main<br>
+                        git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git<br>
+                        git push -u origin main
+                    </div>
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i> A clean <code>.gitignore</code> and <code>vercel.json</code> are already generated in the root directory.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Deployment Comparison (Vercel vs Cloud Run vs Render) -->
+    <div class="yt-card p-4 mb-4">
+        <h4 class="fw-bold mb-3"><i class="bi bi-cloud-upload-fill text-danger me-2"></i>Part 2: Real-World Deployment &mdash; Vercel vs. 24/7 Always-On</h4>
+        <p class="text-muted small mb-4">
+            You asked if <strong>Vercel</strong> is better. Here is the honest industry comparison for this specific type of app:
+        </p>
+
+        <div class="row g-4 mb-4">
+            <!-- Vercel -->
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100 position-relative">
+                    <span class="badge bg-dark position-absolute top-0 end-0 m-3">Serverless</span>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-triangle-fill text-dark me-1"></i> Deploy on Vercel</h5>
+                    <small class="text-muted d-block mb-3">Great for web dashboard UI &amp; analytics</small>
+                    
+                    <ul class="small text-muted ps-3 mb-3">
+                        <li><strong>Pros:</strong> Free SSL, global CDN, instant GitHub sync on git push, zero cost.</li>
+                        <li><strong>Caveat:</strong> Vercel runs <em>Serverless Functions</em> (spins down after 10-60 seconds). Background 24/7 cron loops sleep when no one is visiting.</li>
+                        <li><strong>Verdict:</strong> Excellent for analyzing channels, previewing viral clips, and triggering posts manually. For 24/7 auto-posting while you sleep, pair with an external free ping (e.g. Cron-Job.org).</li>
+                    </ul>
+
+                    <a href="#vercel-steps" class="btn btn-outline-dark btn-sm w-100 fw-bold">View Vercel Steps Below &darr;</a>
+                </div>
+            </div>
+
+            <!-- Cloud Run -->
+            <div class="col-md-4">
+                <div class="p-3 border border-success rounded-3 bg-white h-100 position-relative shadow-sm">
+                    <span class="badge bg-success position-absolute top-0 end-0 m-3">100% Free &bull; Best Option</span>
+                    <h5 class="fw-bold mb-1 text-success"><i class="bi bi-google me-1"></i> Google Cloud Run</h5>
+                    <small class="text-muted d-block mb-3">Native 24/7 container deployment</small>
+                    
+                    <ul class="small text-muted ps-3 mb-3">
+                        <li><strong>Pros:</strong> 1-Click native deploy right in Google AI Studio! Generous <strong>2M requests/month free</strong> forever.</li>
+                        <li><strong>Uptime:</strong> Native Node.js Express runtime with zero function timeouts. Full WebSocket &amp; streaming support.</li>
+                        <li><strong>Verdict:</strong> <strong>Top recommendation.</strong> Runs the entire engine 24/7 with zero configuration and zero bills.</li>
+                    </ul>
+
+                    <a href="#cloudrun-steps" class="btn btn-success btn-sm w-100 fw-bold">View Cloud Run Steps Below &darr;</a>
+                </div>
+            </div>
+
+            <!-- Render / Railway -->
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100 position-relative">
+                    <span class="badge bg-primary position-absolute top-0 end-0 m-3">GitHub Web Service</span>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-hdd-network-fill text-primary me-1"></i> Render / Railway</h5>
+                    <small class="text-muted d-block mb-3">Always-on Node.js background worker</small>
+                    
+                    <ul class="small text-muted ps-3 mb-3">
+                        <li><strong>Pros:</strong> Connects directly to your GitHub repo, auto-deploys on every git push, keeps <code>server.js</code> running continuously.</li>
+                        <li><strong>Free Tier:</strong> Render offers 750 free instance hours/month (enough for 1 full web service).</li>
+                        <li><strong>Verdict:</strong> Great alternative if you want a standalone Git-connected container server.</li>
+                    </ul>
+
+                    <a href="#render-steps" class="btn btn-outline-primary btn-sm w-100 fw-bold">View Render Steps Below &darr;</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step by Step Vercel Walkthrough -->
+        <div id="vercel-steps" class="p-4 bg-light rounded-3 border mb-4">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-triangle-fill text-dark me-2"></i>How to Deploy to Vercel Step-by-Step:</h5>
+            <ol class="small text-muted ps-3 mb-3">
+                <li class="mb-2"><strong>Push your repo to GitHub:</strong> Complete Part 1 above so your code is on GitHub. (We have already configured <code>vercel.json</code> and <code>api/index.js</code> for you).</li>
+                <li class="mb-2">Go to <a href="https://vercel.com/new" target="_blank" class="fw-bold text-dark">vercel.com/new</a> and sign in with your GitHub account.</li>
+                <li class="mb-2">Click <strong>Import</strong> next to your repository (e.g. <code>youtube-shorts-automation-studio</code>).</li>
+                <li class="mb-2">
+                    Under <strong>Environment Variables</strong>, add:
+                    <ul class="font-monospace text-dark mt-1">
+                        <li><code>SESSION_SECRET</code> = <code>super_secure_random_key_2026</code></li>
+                        <li><code>YOUTUBE_API_KEY</code> = [Your YouTube Data API v3 key from Google Cloud Console]</li>
+                        <li><code>GEMINI_API_KEY</code> = [Optional, for AI video concept generation]</li>
+                    </ul>
+                </li>
+                <li class="mb-2">Click <strong>Deploy</strong>. Within 45 seconds, Vercel will give you a live production URL like <code>https://your-app.vercel.app</code>!</li>
+                <li><strong>Pro-Tip for 24/7 Scheduled Automation:</strong> On Vercel, set up a free account on <a href="https://cron-job.org" target="_blank" class="text-primary fw-bold">cron-job.org</a> to ping <code>https://your-app.vercel.app/schedule</code> every 10 minutes to trigger automated checks without sleeping.</li>
+            </ol>
+        </div>
+
+        <!-- Step by Step Cloud Run Walkthrough -->
+        <div id="cloudrun-steps" class="p-4 bg-white rounded-3 border border-success mb-4 shadow-sm">
+            <h5 class="fw-bold text-success mb-3"><i class="bi bi-google me-2"></i>How to Deploy to Google Cloud Run (1-Click &amp; 100% Free):</h5>
+            <ol class="small text-muted ps-3 mb-0">
+                <li class="mb-2">In the <strong>Google AI Studio Build top header</strong>, click the blue <strong>Deploy</strong> button.</li>
+                <li class="mb-2">Select your Google Cloud Project (or let AI Studio create the standard free tier project).</li>
+                <li class="mb-2">Under <strong>Environment Variables</strong>, confirm <code>PORT=3000</code> and your <code>SESSION_SECRET</code> are set.</li>
+                <li class="mb-2">Click <strong>Confirm &amp; Deploy</strong>. Cloud Run compiles the container and issues a permanent, public SSL URL: <code>https://your-service.run.app</code>.</li>
+                <li>Your app is live 24/7 worldwide with zero maintenance and zero server fees!</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Section 3: The 30-Day YouTube Shorts Growth Engine (100k Subs Blueprint) -->
+    <div class="yt-card p-4 border-top border-4 border-danger">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge bg-danger p-2 fs-5"><i class="bi bi-graph-up-arrow"></i></span>
+            <div>
+                <h4 class="fw-bold mb-0">Part 3: The 30-Day Real-World Strategy to Reach 100K Subscribers &amp; Monetization</h4>
+                <small class="text-muted">Empirical YouTube Shorts Algorithm mechanics tailored for <strong>@thedailyE-shorts</strong> &amp; <strong>@tiinywondertales</strong></small>
+            </div>
+        </div>
+
+        <div class="alert alert-warning border-warning d-flex align-items-center gap-3 mb-4">
+            <i class="bi bi-trophy-fill text-warning fs-3"></i>
+            <div class="small">
+                <strong>YouTube Partner Program (Monetization) Milestone:</strong> To monetize YouTube Shorts, you need <strong>1,000 Subscribers</strong> AND <strong>10 Million valid public Shorts views within 90 days</strong>. Here is the mathematically proven blueprint to reach it fast.
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Channel 1: The Daily Shorts -->
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0 text-danger"><i class="bi bi-lightning-fill me-1"></i> Channel 1: @thedailyE-shorts</h6>
+                        <span class="badge bg-danger-subtle text-danger">Comedy &bull; Relatable &bull; Skits</span>
+                    </div>
+                    <p class="small text-muted mb-3">Target Audience: Teens, College Students, Young Professionals scrolling on mobile.</p>
+
+                    <h6 class="fw-bold small text-dark mb-2">1. The 3X/Day Golden Publishing Times:</h6>
+                    <div class="d-flex gap-2 mb-3">
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">11:30 AM<br><small class="text-muted">Lunch Break</small></span>
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">04:30 PM<br><small class="text-muted">Commute / School</small></span>
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">08:30 PM<br><small class="text-muted">Peak Evening Bed-Scroll</small></span>
+                    </div>
+
+                    <h6 class="fw-bold small text-dark mb-2">2. Viral Algorithmic Metrics to Win:</h6>
+                    <ul class="small text-muted ps-3 mb-3">
+                        <li><strong>Viewed vs. Swiped Away (VVSA):</strong> Must be &gt; <strong>75%</strong>. Use high-contrast bold subtitles with an instant pattern-interrupt question in seconds 0:00 - 0:02.</li>
+                        <li><strong>Average Percentage Viewed (APV):</strong> Must be &gt; <strong>110%</strong>. Keep videos tight (22s - 34s) and design seamless audio loops so viewers watch 1.5 times before swiping.</li>
+                        <li><strong>The Pinned Conflict Question:</strong> Always pin a polarized question (e.g. <em>"Who does this every single Friday? Be honest 👇"</em>) to ignite rapid comment fights.</li>
+                    </ul>
+
+                    <h6 class="fw-bold small text-dark mb-1">3. Automated Tags Setup in Studio:</h6>
+                    <div class="p-2 bg-light rounded border font-monospace small text-dark">
+                        #shorts #thedailyEshorts #comedy #relatable #viralshorts
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channel 2: TinyWonderTales -->
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-stars me-1"></i> Channel 2: @tiinywondertales</h6>
+                        <span class="badge bg-primary-subtle text-primary">Kids Animation &bull; Bedtime &bull; Morals</span>
+                    </div>
+                    <p class="small text-muted mb-3">Target Audience: Parents, Toddlers, Preschoolers, Kindergarteners.</p>
+
+                    <h6 class="fw-bold small text-dark mb-2">1. The 3X/Day Golden Publishing Times:</h6>
+                    <div class="d-flex gap-2 mb-3">
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">08:00 AM<br><small class="text-muted">Morning Routine</small></span>
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">01:30 PM<br><small class="text-muted">Post-Nap Calm Down</small></span>
+                        <span class="badge bg-light text-dark border p-2 flex-fill text-center">07:00 PM<br><small class="text-muted">Bedtime Story Wind-Down</small></span>
+                    </div>
+
+                    <h6 class="fw-bold small text-dark mb-2">2. Viral Algorithmic Metrics to Win:</h6>
+                    <ul class="small text-muted ps-3 mb-3">
+                        <li><strong>Sensory Calm Retention:</strong> Avoid harsh flashing lights. Use warm golden hour diffusion, gentle 125 wpm narration, and whimsical fairy glow that calms overstimulated toddlers.</li>
+                        <li><strong>Infinite Replay Loop:</strong> Toddlers love repetition! A 35s story with gentle rhyme rhythm gets replayed 3–5 times per viewing session by parents.</li>
+                        <li><strong>Parent-Engagement Pinned Comment:</strong> Pin questions like <em>"What is your little one's favorite bedtime ritual tonight? 💕"</em> to build an active subscriber community.</li>
+                    </ul>
+
+                    <h6 class="fw-bold small text-dark mb-1">3. Automated Tags Setup in Studio:</h6>
+                    <div class="p-2 bg-light rounded border font-monospace small text-dark">
+                        #shorts #tiinywondertales #kidsstories #bedtimestory #animation
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 30-Day Execution Calendar -->
+        <div class="mt-4 p-3 bg-light rounded border">
+            <h6 class="fw-bold mb-2"><i class="bi bi-calendar-check-fill text-success me-2"></i>The 30-Day Daily Execution Checklist:</h6>
+            <div class="row g-3 small text-muted">
+                <div class="col-md-3">
+                    <strong>Days 1&ndash;7: Momentum Seed</strong><br>
+                    Post 2 Shorts/day per channel. Scan the top 3 outlier videos on your <strong>Trending Outliers</strong> dashboard to model verified breakout topics.
+                </div>
+                <div class="col-md-3">
+                    <strong>Days 8&ndash;14: Algorithmic Calibration</strong><br>
+                    Check YouTube Studio Analytics. Identify which 3-second hooks scored &gt; 70% retention. Double down on those formats.
+                </div>
+                <div class="col-md-3">
+                    <strong>Days 15&ndash;21: 3X Scaling Phase</strong><br>
+                    Increase volume to 3 Shorts/day per channel using this studio's automated scheduling queue. YouTube's recommendation feed activates after 25+ consistent posts.
+                </div>
+                <div class="col-md-3">
+                    <strong>Days 22&ndash;30: Breakthrough Compound</strong><br>
+                    Cross-link winning Shorts as "Related Videos" on long-form content to convert millions of Shorts views into dedicated channel subscribers.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

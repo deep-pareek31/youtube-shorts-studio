@@ -1,0 +1,137 @@
+<%- include('partials/header') %>
+
+<div class="mt-2 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-sliders text-danger me-2"></i>Configure Theme: <%= theme.theme_name %></h2>
+            <p class="text-muted mb-0">Fine-tune strategy pipeline, lighting setups, voiceover styles, and target YouTube channels.</p>
+        </div>
+        <a href="/themes" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Back to Themes</a>
+    </div>
+
+    <div class="yt-card p-4">
+        <form method="POST" action="/themes/<%= theme.id %>/details">
+            <!-- Basic Details -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label for="theme_name" class="form-label fw-bold">Theme Name:</label>
+                    <input type="text" class="form-control" id="theme_name" name="theme_name" value="<%= theme.theme_name %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="target_channel_id" class="form-label fw-bold">Target YouTube Channel Output:</label>
+                    <select class="form-select" id="target_channel_id" name="target_channel_id">
+                        <% (available_accounts || []).forEach(function(acc) { %>
+                            <option value="<%= acc.id %>" <%= (theme.youtube_channel_id == acc.id || theme.instagram_account_id == acc.id) ? 'selected' : '' %>>
+                                <%= acc.channel_title || acc.username %> (<%= acc.handle || ('@' + acc.username) %>)
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Strategy Pipeline Toggle -->
+            <div class="p-3 mb-4 rounded-3 border bg-light">
+                <label for="strategy" class="form-label fw-bold text-dark fs-6 d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-arrow-left-right text-primary"></i>
+                    Core Functionality &amp; Generation Strategy:
+                </label>
+                <select class="form-select mb-2 fw-semibold" id="strategy" name="strategy">
+                    <option value="short_clips" <%= (!theme.strategy || theme.strategy === 'short_clips') ? 'selected' : '' %>>
+                        ✂️ Short Video Clips Mode (Extract 3-4 High-Engagement Viral Clips from Source Video)
+                    </option>
+                    <option value="ai_video" <%= theme.strategy === 'ai_video' ? 'selected' : '' %>>
+                        ✨ Similar AI Video Mode (Replicate Lighting Context, Voiceover Cadence &amp; Original Script)
+                    </option>
+                </select>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i> You can change this functionality at any time. When changed, future proposals adapt automatically.
+                </small>
+            </div>
+
+            <!-- Monitored Channels for Trending Outliers -->
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="source_accounts_input" class="form-label fw-bold mb-0">Monitored Inspiration Channels for Trending Outliers:</label>
+                    <a href="/themes/<%= theme.id %>/trending" class="badge bg-danger text-white text-decoration-none py-1 px-2">
+                        <i class="bi bi-fire me-1"></i> View Live Trending Outliers
+                    </a>
+                </div>
+                <div class="input-group mb-1">
+                    <span class="input-group-text bg-white text-danger"><i class="bi bi-youtube"></i></span>
+                    <input type="text" class="form-control" id="source_accounts_input" name="source_accounts_input" 
+                           value="<%= (theme.source_accounts || []).join(', ') %>" placeholder="e.g. @supersimple, @brightlystorytime, @cocomelon, https://youtube.com/@channel">
+                </div>
+                <small class="text-muted">Enter comma-separated channel handles or URLs. The system scans these channels to find breakout viral outliers for this theme.</small>
+            </div>
+
+            <!-- AI Video Specific Preferences -->
+            <div id="ai_video_settings" class="mb-4 p-3 border rounded-3 bg-white" style="display: <%= theme.strategy === 'ai_video' ? 'block' : 'none' %>;">
+                <h5 class="fw-bold text-primary mb-3"><i class="bi bi-stars me-2"></i>AI Video Generation Blueprint Settings</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="ai_lighting_profile" class="form-label fw-bold">Lighting &amp; Visual Context Profile:</label>
+                        <textarea class="form-control" id="ai_lighting_profile" name="ai_lighting_profile" rows="3" 
+                                  placeholder="e.g. Moody cinematic Rembrandt lighting, dark backdrop, 3200K tungsten hair light..."><%= theme.ai_lighting_profile || '' %></textarea>
+                        <small class="text-muted">Specifies exact lighting setup for generated scene visuals.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="ai_voiceover_style" class="form-label fw-bold">Voiceover Cadence &amp; Tone Style:</label>
+                        <textarea class="form-control" id="ai_voiceover_style" name="ai_voiceover_style" rows="3" 
+                                  placeholder="e.g. Authoritative yet conversational, 160 wpm, clear dramatic pause before hooks..."><%= theme.ai_voiceover_style || '' %></textarea>
+                        <small class="text-muted">Directs speech cadence, tone, and pacing for generated voiceovers.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shorts Extractor Specific Preferences -->
+            <div id="shorts_clips_settings" class="mb-4 p-3 border rounded-3 bg-white" style="display: <%= (!theme.strategy || theme.strategy === 'short_clips') ? 'block' : 'none' %>;">
+                <h5 class="fw-bold text-danger mb-3"><i class="bi bi-scissors me-2"></i>Shorts Extraction Settings</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="clips_target_count" class="form-label fw-bold">Clips Extracted per Video:</label>
+                        <select class="form-select" id="clips_target_count" name="clips_target_count">
+                            <option value="3" <%= theme.clips_target_count == 3 ? 'selected' : '' %>>3 Short Clips</option>
+                            <option value="4" <%= (!theme.clips_target_count || theme.clips_target_count == 4) ? 'selected' : '' %>>4 Short Clips</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="min_viral_score" class="form-label fw-bold">Min Virality Score Filter:</label>
+                        <input type="number" class="form-control" id="min_viral_score" name="min_viral_score" value="<%= theme.min_viral_score || 85 %>" min="50" max="100">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Aspect Ratio &amp; Subtitles:</label>
+                        <input type="text" class="form-control bg-light" value="9:16 Vertical &amp; Auto-Subtitles" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                <a href="/themes" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-yt-red px-4 py-2 fw-bold">
+                    <i class="bi bi-check2-circle me-1"></i> Save Theme Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const stratSelect = document.getElementById('strategy');
+        const aiSection = document.getElementById('ai_video_settings');
+        const shortsSection = document.getElementById('shorts_clips_settings');
+
+        function updateStrategyVisibility() {
+            if (stratSelect.value === 'ai_video') {
+                aiSection.style.display = 'block';
+                shortsSection.style.display = 'none';
+            } else {
+                aiSection.style.display = 'none';
+                shortsSection.style.display = 'block';
+            }
+        }
+        stratSelect.addEventListener('change', updateStrategyVisibility);
+    });
+</script>
+
+<%- include('partials/footer') %>

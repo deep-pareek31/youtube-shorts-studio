@@ -1,0 +1,68 @@
+<%- include('partials/header') %>
+
+<div class="mt-2 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-diagram-3 text-danger me-2"></i>Monitored Inspiration YouTube Channels</h2>
+            <p class="text-muted mb-0">For target channel: <strong><%= target_account.channel_title || target_account.username %></strong> (<span class="text-danger">@<%= target_account.username %></span>)</p>
+        </div>
+        <a href="/accounts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Back to Channels</a>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="yt-card p-4">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-plus-circle text-danger me-2"></i>Add Monitored YouTube Channel(s)</h5>
+                <form method="POST" action="/accounts/<%= target_account.id %>/sources/add">
+                    <div class="mb-3">
+                        <label for="source_account_inputs" class="form-label fw-bold">YouTube Channel URLs or Handles (comma-separated):</label>
+                        <textarea class="form-control" id="source_account_inputs" name="source_account_inputs" rows="4" placeholder="e.g. https://www.youtube.com/@hubermanlab, @veritasium, https://www.youtube.com/@lexfridman"></textarea>
+                        <small class="form-text text-muted">The system will periodically analyze top-performing and most-viewed videos from these channels to suggest Shorts and AI video themes.</small>
+                    </div>
+                    <button type="submit" class="btn btn-yt-red fw-bold px-4 py-2">
+                        <i class="bi bi-plus-lg me-1"></i> Add Tracked Channels
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="yt-card p-4">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-broadcast text-secondary me-2"></i>Currently Monitored Channels (<%= current_sources ? current_sources.length : 0 %>)</h5>
+                <% if (current_sources && current_sources.length > 0) { %>
+                    <div class="list-group">
+                        <% current_sources.forEach(function(source_channel) { %>
+                            <div class="list-group-item d-flex justify-content-between align-items-center p-3 mb-2 border rounded-3 bg-light">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-youtube text-danger fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold text-dark"><%= source_channel %></div>
+                                        <small class="text-muted">Auto-scanned for viral peaks</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <a href="/analyze?input=<%= encodeURIComponent(source_channel) %>" class="btn btn-sm btn-outline-danger" title="Scan top videos right now">
+                                        <i class="bi bi-search me-1"></i> Scan Now
+                                    </a>
+                                    <form method="POST" action="/accounts/<%= target_account.id %>/sources/remove" style="display: inline;">
+                                        <input type="hidden" name="source_username_to_remove" value="<%= source_channel %>">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove" onclick="return confirm('Remove channel from tracked sources?');">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-eye-slash fs-2 text-secondary mb-2 d-block"></i>
+                        No inspiration channels defined yet for this target channel. Add one to begin automated viral scanning!
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

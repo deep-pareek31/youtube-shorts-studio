@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'YouTube Studio' %> - YouTube Automation & Shorts Studio</title>
+    <!-- Bootstrap CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --yt-red: #FF0000;
+            --yt-dark: #0F0F0F;
+            --yt-card-bg: #FFFFFF;
+            --yt-border: #E5E5E5;
+            --yt-accent: #065FD4;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: #F8F9FA;
+            color: #1F1F1F;
+        }
+        .navbar-yt {
+            background-color: #0F0F0F;
+            border-bottom: 3px solid #FF0000;
+            padding: 0.75rem 1.5rem;
+        }
+        .navbar-brand-yt {
+            color: #FFFFFF !important;
+            font-weight: 800;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.5px;
+        }
+        .navbar-brand-yt .badge-studio {
+            background-color: #FF0000;
+            color: #FFF;
+            font-size: 0.7rem;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .nav-yt .nav-link {
+            color: #E0E0E0 !important;
+            font-weight: 600;
+            font-size: 0.92rem;
+            padding: 0.5rem 0.9rem !important;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-yt .nav-link:hover, .nav-yt .nav-link.active {
+            color: #FFFFFF !important;
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+        .btn-yt-red {
+            background-color: #FF0000;
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: background-color 0.15s ease;
+        }
+        .btn-yt-red:hover {
+            background-color: #CC0000;
+            color: white;
+        }
+        .container-custom {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+        .yt-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .yt-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+        }
+        .badge-shorts {
+            background: linear-gradient(135deg, #FF0000 0%, #FF416C 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-ai {
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .shorts-preview-frame {
+            position: relative;
+            width: 100%;
+            max-width: 220px;
+            aspect-ratio: 9/16;
+            background-color: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            margin: 0 auto;
+        }
+        .badge-outlier {
+            background: linear-gradient(135deg, #DC2626 0%, #EA580C 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-seo {
+            background: #ECFDF5;
+            color: #047857;
+            border: 1px solid #10B981;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-yt sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand navbar-brand-yt" href="/dashboard">
+                <i class="bi bi-youtube text-danger fs-4"></i>
+                <span>TubeStudio</span>
+                <span class="badge-studio">Automation</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTube" aria-controls="navbarTube" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarTube">
+                <ul class="navbar-nav nav-yt me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/trending"><i class="bi bi-fire text-danger"></i> Trending Outliers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/analyze"><i class="bi bi-search-heart"></i> Analyze &amp; Generate</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/all_posts"><i class="bi bi-play-btn"></i> Uploads &amp; Shorts</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/themes"><i class="bi bi-collection-play"></i> Themes &amp; Strategy</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/accounts"><i class="bi bi-person-video2"></i> Channels</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/schedule"><i class="bi bi-calendar3"></i> Schedule</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/deploy-guide" class="btn btn-outline-light btn-sm text-nowrap">
+                        <i class="bi bi-rocket-takeoff text-warning me-1"></i> Deploy Free 24/7
+                    </a>
+                    <a href="/analyze" class="btn btn-yt-red btn-sm text-nowrap">
+                        <i class="bi bi-plus-circle me-1"></i> New Analysis
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="container-custom">
+        <% if (typeof messages !== 'undefined') { %>
+            <% for (const category in messages) { %>
+                <% (messages[category] || []).forEach(function(msg) { %>
+                    <div class="alert alert-<%= category === 'error' ? 'danger' : (category === 'info' ? 'primary' : category) %> alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi <%= category === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill' %> me-2"></i>
+                        <%= msg %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% }); %>
+            <% } %>
+        <% } %>

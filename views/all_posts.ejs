@@ -1,0 +1,369 @@
+<%- include('partials/header') %>
+
+<!-- YouTube Video & Shorts Preview Modal -->
+<div class="modal fade" id="postPreviewModal" tabindex="-1" aria-labelledby="postPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white py-3">
+        <h5 class="modal-title fw-bold" id="postPreviewModalLabel"><i class="bi bi-youtube text-danger me-2"></i>Content Studio Preview</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editPostFormModal" method="POST">
+        <div class="modal-body p-4">
+            <input type="hidden" id="previewPostIdModal" name="post_id">
+            <input type="hidden" id="previewPostOriginalStatusModal" name="original_status">
+            
+            <div class="row g-4">
+                <div class="col-md-5 text-center">
+                    <div id="previewBadgeType" class="mb-2"></div>
+                    <div id="previewMediaContainer" class="shorts-preview-frame mx-auto mb-3" style="max-width: 240px; min-height: 380px; position: relative;">
+                        <img id="previewImage" src="" alt="preview" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-dark bg-opacity-75 text-start" style="font-size: 11px;">
+                            <span id="previewOverlaySubtitles">Auto-synced captions</span>
+                        </div>
+                    </div>
+                    <div class="p-2 bg-light rounded text-start small border">
+                        <div><strong>Target Channel:</strong> <span id="previewTargetAccountModalText"></span></div>
+                        <div><strong>Clip Range:</strong> <span id="previewTimecodeText">00:00 - 00:45</span></div>
+                        <div id="previewViralScoreWrapper" class="mt-1">
+                            <strong>Virality Index:</strong> <span id="previewViralScoreText" class="badge bg-success">92%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="mb-3">
+                        <label for="previewThemeText" class="form-label fw-bold">YouTube Video / Shorts Title:</label>
+                        <input type="text" id="previewThemeInput" name="theme" class="form-control" placeholder="Catchy hook title...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="previewDescriptionModalText" class="form-label fw-bold">Description &amp; Pinned Comment:</label>
+                        <textarea id="previewDescriptionModalText" name="description" class="form-control" rows="4" style="white-space: pre-wrap;"></textarea>
+                    </div>
+                
+                    <div class="mb-3">
+                        <label for="previewHashtagsModalText" class="form-label fw-bold">SEO Tags &amp; Hashtags (Optimal 3-5):</label>
+                        <input type="text" id="previewHashtagsModalText" name="hashtags" class="form-control">
+                        <small class="text-muted">YouTube recommendation algorithm prefers strictly 3 to 5 hyper-targeted tags to prevent tag-stuffing penalties.</small>
+                    </div>
+
+                    <!-- YouTube Algorithm Reach & Optimization Card -->
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="small fw-bold text-dark d-flex align-items-center gap-1">
+                                <i class="bi bi-cpu-fill text-danger"></i> YouTube Algorithm Score:
+                                <span class="badge bg-success ms-1"><i class="bi bi-shield-check"></i> 98/100 (Max Reach)</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="optimizeCurrentModalAlgorithm();">
+                                <i class="bi bi-magic me-1"></i> Re-Optimize with AI
+                            </button>
+                        </div>
+                        <div class="small text-muted d-flex flex-wrap gap-1">
+                            <span class="badge bg-white text-secondary border">✓ 100-Char Hook</span>
+                            <span class="badge bg-white text-secondary border">✓ High-Intent Synopsis</span>
+                            <span class="badge bg-white text-secondary border">✓ Retention Timestamps</span>
+                            <span class="badge bg-white text-secondary border">✓ Pinned Comment Blueprint</span>
+                            <span class="badge bg-white text-secondary border">✓ 3-5 Tags (No Stuffing)</span>
+                        </div>
+                    </div>
+
+                    <div id="aiLightingScriptSection" class="p-3 mb-3 bg-light rounded border" style="display:none;">
+                        <div class="small fw-bold text-dark mb-1"><i class="bi bi-lightbulb-fill text-warning me-1"></i> Lighting Setup:</div>
+                        <div id="aiLightingNotesText" class="small text-muted mb-2"></div>
+                        <div class="small fw-bold text-dark mb-1"><i class="bi bi-mic-fill text-danger me-1"></i> Voiceover Script:</div>
+                        <div id="aiVoiceoverScriptText" class="small font-monospace text-secondary p-2 bg-white rounded border" style="max-height: 100px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div class="mb-3" id="rescheduleTimeSectionModal" style="display:none;">
+                        <label for="newScheduleTimeModal" class="form-label fw-bold">Scheduled Upload Slot:</label>
+                        <input type="datetime-local" class="form-control" id="newScheduleTimeModal" name="new_schedule_time">
+                        <small class="form-text text-muted">Select future time for automatic YouTube publishing.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" id="modalSubmitButton" class="btn btn-success fw-bold">Save &amp; Schedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="mt-2 mb-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-play-btn text-danger me-2"></i>YouTube Uploads &amp; Scheduled Shorts</h2>
+            <p class="text-muted mb-0">Review pending Shorts extracts, inspect AI video concepts, approve queues, and manage publish times.</p>
+        </div>
+        <a href="/analyze" class="btn btn-yt-red"><i class="bi bi-plus-circle me-1"></i> Analyze New Video/Channel</a>
+    </div>
+
+    <!-- Today's Queue -->
+    <div class="yt-card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-calendar-event text-danger me-2"></i>Today's Publishing Queue</h5>
+            <span class="badge bg-danger"><%= todays_posts ? todays_posts.length : 0 %> queued today</span>
+        </div>
+
+        <% if (todays_posts && todays_posts.length > 0) { %>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Format</th>
+                        <th>Video Title &amp; Hook</th>
+                        <th>Type / Timecode</th>
+                        <th>Virality</th>
+                        <th>Scheduled</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% todays_posts.forEach(function(post) { %>
+                    <tr id="post-row-<%= post.id %>">
+                        <td>
+                            <div style="width: 50px; height: 65px; border-radius: 4px; overflow: hidden; background: #111;">
+                                <% if (post.image_filename) { %>
+                                    <img src="/uploads/media_files/<%= post.image_filename %>" alt="thumb" style="width: 100%; height: 100%; object-fit: cover;">
+                                <% } else { %>
+                                    <div class="d-flex h-100 align-items-center justify-content-center text-white"><i class="bi bi-play-circle"></i></div>
+                                <% } %>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark"><%= post.theme %></div>
+                            <small class="text-muted text-truncate d-block" style="max-width: 400px;"><%= post.description %></small>
+                        </td>
+                        <td>
+                            <% if (post.post_type === 'ai_video' || (post.approved_theme && post.approved_theme.strategy === 'ai_video')) { %>
+                                <span class="badge-ai"><i class="bi bi-stars"></i> AI Video</span>
+                            <% } else { %>
+                                <span class="badge-shorts"><i class="bi bi-scissors"></i> <%= post.clip_timestamp || 'Shorts' %></span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <% if (post.viral_score) { %>
+                                <span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-fire"></i> <%= post.viral_score %>%</span>
+                            <% } else { %>
+                                <span class="text-muted small">-</span>
+                            <% } %>
+                        </td>
+                        <td><small class="fw-semibold"><%= post.scheduled_time_formatted || 'Auto-slot' %></small></td>
+                        <td>
+                            <% if (post.status === 'pending_approval') { %>
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending Approval</span>
+                            <% } else if (post.status === 'scheduled') { %>
+                                <span class="badge bg-primary"><i class="bi bi-check2"></i> Scheduled</span>
+                            <% } else if (post.status === 'posted' || post.status === 'uploaded') { %>
+                                <span class="badge bg-success"><i class="bi bi-upload"></i> Uploaded</span>
+                            <% } else { %>
+                                <span class="badge bg-secondary"><%= post.status %></span>
+                            <% } %>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <% if (post.status === 'pending_approval') { %>
+                                    <form method="POST" action="/post/<%= post.id %>/approve" style="display: inline-block;">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Approve for automated upload">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-warning text-dark" onclick='requestChanges(<%= post.id %>, <%- JSON.stringify(post.theme || "") %>)' title="Suggest AI modifications">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="POST" action="/post/<%= post.id %>/get_new_option" style="display: inline-block;">
+                                        <button type="submit" class="btn btn-sm btn-info text-white" title="Regenerate alternative option">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="/post/<%= post.id %>/decline" style="display: inline-block;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Decline">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                <% } %>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick='openStudioPreview(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)'>
+                                    <i class="bi bi-eye"></i> Review
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+        <% } else { %>
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-calendar2-check fs-2 text-secondary mb-2 d-block"></i>
+            No videos or Shorts scheduled for today. Analyze a channel to generate clips!
+        </div>
+        <% } %>
+    </div>
+
+    <!-- Other Posts / Archive / Queue -->
+    <div class="yt-card p-4">
+        <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-archive text-secondary me-2"></i>All Scheduled &amp; Archived Videos</h5>
+        <% if (other_posts && other_posts.length > 0) { %>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th>Title &amp; Topic</th>
+                        <th>Type</th>
+                        <th>Scheduled Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% other_posts.forEach(function(post) { %>
+                    <tr id="post-row-<%= post.id %>">
+                        <td><span class="text-muted small">#<%= post.id %></span></td>
+                        <td>
+                            <div class="fw-bold text-dark"><%= post.theme %></div>
+                            <small class="text-muted text-truncate d-block" style="max-width: 450px;"><%= post.description %></small>
+                        </td>
+                        <td>
+                            <% if (post.post_type === 'ai_video' || (post.approved_theme && post.approved_theme.strategy === 'ai_video')) { %>
+                                <span class="badge-ai"><i class="bi bi-stars"></i> AI Video</span>
+                            <% } else { %>
+                                <span class="badge-shorts"><i class="bi bi-scissors"></i> <%= post.clip_timestamp || 'Shorts' %></span>
+                            <% } %>
+                        </td>
+                        <td><%= post.scheduled_time_formatted || 'Not Scheduled' %></td>
+                        <td>
+                            <span class="badge <%= post.status === 'scheduled' ? 'bg-primary' : (post.status === 'posted' ? 'bg-success' : 'bg-secondary') %>">
+                                <%= post.status %>
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    onclick='openStudioPreview(<%= JSON.stringify(post).replace(/'/g, "&apos;") %>)'>
+                                <%= post.status === 'pending_approval' ? 'Review & Edit' : 'Inspect & Reschedule' %>
+                            </button>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+        <% } else { %>
+        <div class="text-muted text-center py-3">No archived or future posts.</div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+function openStudioPreview(post) {
+    const modalEl = document.getElementById('postPreviewModal');
+    if (!modalEl) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    document.getElementById('previewPostIdModal').value = post.id;
+    document.getElementById('previewPostOriginalStatusModal').value = post.status;
+    document.getElementById('previewThemeInput').value = post.theme || "";
+    document.getElementById('previewDescriptionModalText').value = post.description || "";
+    document.getElementById('previewHashtagsModalText').value = post.hashtags || "";
+    document.getElementById('previewTargetAccountModalText').textContent = post.youtube_channel ? (post.youtube_channel.channel_title || post.youtube_channel.username) : "Default Channel";
+    document.getElementById('previewTimecodeText').textContent = post.clip_timestamp || (post.duration_seconds ? `00:00 - 00:${post.duration_seconds}` : "Full Video");
+    document.getElementById('previewViralScoreText').textContent = (post.viral_score || 90) + "%";
+    
+    const badgeType = document.getElementById('previewBadgeType');
+    const aiSection = document.getElementById('aiLightingScriptSection');
+    const imgEl = document.getElementById('previewImage');
+    
+    if (post.image_filename) {
+        imgEl.src = "/uploads/media_files/" + post.image_filename;
+    } else {
+        imgEl.src = "/uploads/media_files/sample_workspace.svg";
+    }
+
+    if (post.post_type === 'ai_video' || (post.approved_theme && post.approved_theme.strategy === 'ai_video')) {
+        badgeType.innerHTML = '<span class="badge-ai"><i class="bi bi-stars"></i> Similar AI Video Concept</span>';
+        aiSection.style.display = 'block';
+        document.getElementById('aiLightingNotesText').textContent = post.ai_lighting_notes || (post.approved_theme ? post.approved_theme.ai_lighting_profile : "Cinematic Rembrandt setup");
+        document.getElementById('aiVoiceoverScriptText').textContent = post.ai_voiceover_script || "Voiceover generated script ready for synthesis.";
+    } else {
+        badgeType.innerHTML = '<span class="badge-shorts"><i class="bi bi-scissors"></i> Shorts Highlights Extract</span>';
+        aiSection.style.display = 'none';
+    }
+
+    const rescheduleSection = document.getElementById('rescheduleTimeSectionModal');
+    const submitBtn = document.getElementById('modalSubmitButton');
+
+    if (post.status === 'pending_approval') {
+        rescheduleSection.style.display = 'none';
+        submitBtn.textContent = 'Approve & Confirm Upload';
+        submitBtn.className = 'btn btn-success fw-bold';
+        document.getElementById('editPostFormModal').action = `/post/${post.id}/approve_with_edits`;
+    } else {
+        rescheduleSection.style.display = 'block';
+        submitBtn.textContent = 'Reschedule Upload';
+        submitBtn.className = 'btn btn-primary fw-bold';
+        document.getElementById('editPostFormModal').action = `/post/${post.id}/reschedule_and_reapprove`;
+    }
+
+    modal.show();
+}
+
+function requestChanges(postId, postTheme) {
+    const suggestions = prompt(`Enter instructions for AI to revise this video/clip "${postTheme || ''}":`, "Make the opening hook punchier and add more contrast to lighting notes");
+    if (suggestions !== null && suggestions.trim() !== "") {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/post/${postId}/request_changes`;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'suggestions';
+        input.value = suggestions;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function optimizeCurrentModalAlgorithm() {
+    const title = document.getElementById('previewThemeInput').value || "Viral Video";
+    const isKids = title.toLowerCase().match(/kid|wonder|tale|story|bedtime|pip|pixel|nursery/);
+    const isComedy = title.toLowerCase().match(/short|daily|comedy|joke|funny|laugh|vlog|relatable/);
+
+    let hook, synopsis, timestamps, pinned, tags;
+    if (isKids) {
+        hook = `✨ Can a tiny firefly light up the darkest night? Watch Pip discover courage!`;
+        synopsis = `Join Pip on an enchanting bedtime adventure in the Whispering Woods. Teaching toddlers and young children about self-confidence, kindness, and bedtime comfort.`;
+        timestamps = `⏱️ Retention Chapters:\n00:00 - The Whispering Forest Hook\n00:15 - Pip's Brave Glow\n00:30 - Bedtime Moral Lesson`;
+        pinned = `🌙 Pinned Engagement Question: What makes YOUR little one feel brave at bedtime? Tell us in the comments! 👇`;
+        tags = `#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #moralstories`;
+    } else if (isComedy) {
+        hook = `😂 The exact second you realize adulthood is just deciding what to eat every single day.`;
+        synopsis = `Ever had your brain completely glitch on a simple question? We break down the most painfully relatable everyday moments that everyone secretly experiences.`;
+        timestamps = `⏱️ Retention Markers:\n00:00 - The Uncomfortable Truth\n00:12 - The Brain Glitch\n00:25 - The Relatable Twist`;
+        pinned = `💀 Pinned Engagement Question: Who is that one friend who takes 3 business days to reply? Tag them below! 👇`;
+        tags = `#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts`;
+    } else {
+        hook = `⚡ The 1 critical mistake that destroys 40% of your daily momentum.`;
+        synopsis = `A deep dive into the surprising cognitive protocol top performers use to sustain deep focus without burnout.`;
+        timestamps = `⏱️ Retention Markers:\n00:00 - The Overlooked Trap\n00:15 - The Empirical Shift\n00:35 - Actionable Takeaway`;
+        pinned = `💬 Pinned Engagement Question: Which of these habits have you tested? Let us know below! 👇`;
+        tags = `#shorts, #productivity, #mindset, #lifehacks, #viral`;
+    }
+
+    const fullDesc = `${hook}\n\n${synopsis}\n\n${timestamps}\n\n${pinned}`;
+    document.getElementById('previewDescriptionModalText').value = fullDesc;
+    document.getElementById('previewHashtagsModalText').value = tags;
+    
+    // Quick visual toast
+    const badge = document.createElement('div');
+    badge.className = 'alert alert-success py-1 px-3 position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold z-3';
+    badge.innerHTML = '<i class="bi bi-magic me-1"></i> Re-Optimized Description &amp; Hashtags for YouTube Algorithm Reach!';
+    document.body.appendChild(badge);
+    setTimeout(() => badge.remove(), 2500);
+}
+</script>
+
+<%- include('partials/footer') %>

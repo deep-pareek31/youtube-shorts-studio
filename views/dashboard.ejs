@@ -1,0 +1,204 @@
+<%- include('partials/header') %>
+
+<div class="mt-2 mb-4">
+    <!-- Header Hero Banner -->
+    <div class="p-4 rounded-3 text-white mb-4 shadow-sm" style="background: linear-gradient(135deg, #111827 0%, #1F2937 50%, #7F1D1D 100%); border-left: 5px solid #FF0000;">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-danger text-uppercase px-2 py-1"><i class="bi bi-youtube me-1"></i> Studio Hub</span>
+                    <span class="badge bg-dark border border-secondary text-light">AI Gemini 3.8 Powered</span>
+                </div>
+                <h1 class="h2 fw-bold text-white mb-2">YouTube Shorts &amp; AI Video Automation Studio</h1>
+                <p class="text-light opacity-90 mb-3" style="max-width: 650px;">
+                    Analyze top-viewed YouTube videos from any channel. Seamlessly extract <strong>3-4 viral Short clips</strong> with smart hooks, or generate <strong>matching AI video blueprints</strong> with identical lighting, voiceover tone, and ideas.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="/analyze" class="btn btn-yt-red px-3 py-2">
+                        <i class="bi bi-search me-1"></i> Analyze Channel / Video
+                    </a>
+                    <a href="/themes" class="btn btn-outline-light px-3 py-2">
+                        <i class="bi bi-sliders me-1"></i> Manage Themes &amp; Strategies
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 d-none d-lg-block text-end">
+                <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary text-start">
+                    <small class="text-secondary text-uppercase fw-semibold">Connected Channels</small>
+                    <div class="h5 text-white mb-1 fw-bold"><%= typeof channels_count !== 'undefined' ? channels_count : (typeof accounts_count !== 'undefined' ? accounts_count : 2) %> Active Channels</div>
+                    <div class="text-warning small mb-0"><i class="bi bi-lightning-charge-fill me-1"></i> Auto-scheduling engine ready</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Analysis Search Bar -->
+    <div class="yt-card p-3 mb-4">
+        <form method="GET" action="/analyze" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-danger"><i class="bi bi-youtube fs-5"></i></span>
+                    <input type="text" name="channel_url" class="form-control border-start-0 py-2" placeholder="Paste YouTube Channel link, handle (@hubermanlab, @veritasium), or Video URL..." required>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-yt-red w-100 py-2">
+                    <i class="bi bi-magic me-1"></i> Analyze &amp; Generate
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="yt-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold text-uppercase">Pending Approval</span>
+                    <span class="badge bg-warning text-dark"><i class="bi bi-clock-history"></i> Review</span>
+                </div>
+                <div class="fs-2 fw-bold text-dark"><%= pending_posts ? pending_posts.length : 0 %></div>
+                <small class="text-muted">Shorts &amp; AI videos waiting</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="yt-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold text-uppercase">Scheduled Today</span>
+                    <span class="badge bg-primary"><i class="bi bi-calendar-check"></i> Today</span>
+                </div>
+                <div class="fs-2 fw-bold text-dark"><%= typeof scheduled_today_count !== 'undefined' ? scheduled_today_count : 0 %></div>
+                <small class="text-muted">Queued for automated upload</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="yt-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold text-uppercase">Active Themes</span>
+                    <span class="badge bg-success"><i class="bi bi-toggle-on"></i> Live</span>
+                </div>
+                <div class="fs-2 fw-bold text-dark"><%= typeof active_themes_count !== 'undefined' ? active_themes_count : 0 %></div>
+                <small class="text-muted">With Shorts/AI strategy active</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="yt-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold text-uppercase">Connected Channels</span>
+                    <span class="badge bg-dark"><i class="bi bi-person-video"></i> Target</span>
+                </div>
+                <div class="fs-2 fw-bold text-dark"><%= typeof accounts_count !== 'undefined' ? accounts_count : 2 %></div>
+                <small class="text-muted">Managed YouTube outputs</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approval Videos Queue -->
+    <div class="yt-card mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0 fw-bold"><i class="bi bi-hourglass-split text-warning me-2"></i>Content Pending Your Review (<%= pending_posts ? pending_posts.length : 0 %>)</h5>
+                <small class="text-muted">Review extracted Shorts and generated AI video concepts before they are published</small>
+            </div>
+            <a href="/all_posts" class="btn btn-sm btn-outline-secondary">View Full Queue</a>
+        </div>
+        
+        <% if (pending_posts && pending_posts.length > 0) { %>
+        <div class="list-group list-group-flush">
+            <% pending_posts.forEach(function(post) { %>
+            <div class="list-group-item p-3">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div style="width: 70px; height: 90px; background: #000; border-radius: 6px; overflow: hidden; position: relative;">
+                            <% if (post.image_filename) { %>
+                                <img src="/uploads/media_files/<%= post.image_filename %>" alt="preview" style="width: 100%; height: 100%; object-fit: cover;">
+                            <% } else { %>
+                                <div class="d-flex h-100 align-items-center justify-content-center text-white"><i class="bi bi-play-circle fs-3"></i></div>
+                            <% } %>
+                            <span class="position-absolute bottom-0 start-0 w-100 text-center py-1 text-white bg-dark bg-opacity-75" style="font-size: 9px; font-weight: bold;">
+                                <%= post.duration_seconds ? post.duration_seconds + 's' : '9:16' %>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <% if (post.post_type === 'ai_video' || post.approved_theme && post.approved_theme.strategy === 'ai_video') { %>
+                                <span class="badge-ai"><i class="bi bi-stars"></i> AI Video Concept</span>
+                            <% } else { %>
+                                <span class="badge-shorts"><i class="bi bi-scissors"></i> Shorts Extract (<%= post.clip_timestamp || 'Highlight' %>)</span>
+                            <% } %>
+                            <% if (post.viral_score) { %>
+                                <span class="badge bg-light text-dark border"><i class="bi bi-fire text-danger"></i> Viral Score: <strong><%= post.viral_score %>%</strong></span>
+                            <% } %>
+                        </div>
+                        <h6 class="fw-bold mb-1 text-dark"><%= post.theme %></h6>
+                        <p class="mb-1 text-muted small text-truncate" style="max-width: 650px;"><%= post.description %></p>
+                        <small class="text-secondary">
+                            <i class="bi bi-calendar-event me-1"></i> Scheduled: <strong><%= post.scheduled_time_formatted || 'Auto-slot' %></strong>
+                            <% if (post.approved_theme) { %> &bull; Theme: <%= post.approved_theme.theme_name %><% } %>
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="/all_posts#post-<%= post.id %>" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Details &amp; Edit
+                            </a>
+                            <form method="POST" action="/post/<%= post.id %>/approve" style="display: inline-block;">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-lg"></i> Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="/post/<%= post.id %>/decline" style="display: inline-block;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Decline">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+        <% } else { %>
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-check2-circle text-success fs-1 mb-2 d-block"></i>
+            <h6 class="fw-bold">All caught up!</h6>
+            <p class="small mb-3">No posts or clips are currently pending approval. Analyze a YouTube channel to generate more.</p>
+            <a href="/analyze" class="btn btn-sm btn-yt-red"><i class="bi bi-plus-lg me-1"></i> Analyze Channel / Video</a>
+        </div>
+        <% } %>
+    </div>
+
+    <!-- Active Themes & Strategy Switcher Banner -->
+    <div class="yt-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="fw-bold mb-0"><i class="bi bi-gear-wide-connected text-primary me-2"></i>Theme Strategy Pipelines</h5>
+                <small class="text-muted">You can toggle between <strong>Short Video Clips</strong> and <strong>Similar AI Video</strong> at any time for any theme.</small>
+            </div>
+            <a href="/themes" class="btn btn-sm btn-outline-secondary">Manage All Themes</a>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-light">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge-shorts"><i class="bi bi-scissors"></i> Shorts Highlights Mode</span>
+                        <span class="text-muted small">Extracts 3-4 virality clips</span>
+                    </div>
+                    <p class="small text-muted mb-0">Identifies the highest-energy hooks and conversation peaks from long videos with timestamps, auto 9:16 vertical re-framing, and subtitles.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-light">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge-ai"><i class="bi bi-stars"></i> Similar AI Video Mode</span>
+                        <span class="text-muted small">Synthesizes original concept</span>
+                    </div>
+                    <p class="small text-muted mb-0">Re-imagines the core premise with matched studio lighting setup, voiceover cadence and script, scene storyboard, and high-CTR thumbnails.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

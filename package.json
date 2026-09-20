@@ -1,0 +1,21 @@
+{
+  "name": "youtube-automation-tool",
+  "version": "1.0.0",
+  "description": "YouTube automation, channel analyzer, shorts clip generator and AI video studio",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "lint": "node --check server.js",
+    "build": "node -e \"console.log('Build completed successfully')\""
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "multer": "^1.4.5-lts.1"
+  }
+}

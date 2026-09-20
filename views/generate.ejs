@@ -1,0 +1,154 @@
+<%- include('partials/header') %>
+
+<div class="mt-2 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-magic text-danger me-2"></i>Create New Theme &amp; Content Pipeline</h2>
+            <p class="text-muted mb-0">Build automated content strategies for your YouTube channel: extract Shorts clips or generate similar AI videos.</p>
+        </div>
+        <a href="/analyze" class="btn btn-yt-red"><i class="bi bi-search me-1"></i> Or Analyze Existing YouTube Video</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="yt-card p-4">
+                <form method="POST" action="/generate" enctype="multipart/form-data">
+                    <input type="hidden" name="form_mode" value="generate_ai_visual">
+                    
+                    <div class="mb-4">
+                        <label for="gen_theme" class="form-label fw-bold">YouTube Theme Title / Series Name:</label>
+                        <input type="text" class="form-control form-control-lg" id="gen_theme" name="theme" 
+                               value="<%= generated_data && !curation_setup_active ? generated_data.original_theme : '' %>" 
+                               placeholder="e.g. Brain Science In 60 Seconds, AI Engineering Breakdowns" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold d-block">Content Generation Strategy:</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="strategy" id="stratShorts" value="short_clips" checked>
+                                        <label class="form-check-label fw-bold text-dark" for="stratShorts">
+                                            <i class="bi bi-scissors text-danger me-1"></i> Extract 3-4 Shorts Clips
+                                        </label>
+                                    </div>
+                                    <p class="small text-muted mt-2 mb-0">Analyzes long-form YouTube videos, identifies peak retention hooks, and slices them into 9:16 vertical Shorts with subtitles.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="strategy" id="stratAi" value="ai_video">
+                                        <label class="form-check-label fw-bold text-dark" for="stratAi">
+                                            <i class="bi bi-stars text-primary me-1"></i> Generate Similar AI Video
+                                        </label>
+                                    </div>
+                                    <p class="small text-muted mt-2 mb-0">Re-engineers the video concept with matched cinematic lighting, synthetic voiceover, and fresh AI B-roll.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="gen_description" class="form-label fw-bold">Video Concept / Core Idea &amp; Hook Angle:</label>
+                        <textarea class="form-control" id="gen_description" name="description" rows="3" 
+                                  placeholder="Describe the topic or prompt for Gemini AI..." required><%= generated_data && !curation_setup_active ? generated_data.original_description : '' %></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="ai_lighting_profile" class="form-label fw-bold">Lighting &amp; Visual Tone:</label>
+                            <select class="form-select" id="ai_lighting_profile" name="ai_lighting_profile">
+                                <option value="Dramatic Warm Studio Key + Blue Backlight" selected>Dramatic Warm Studio Key + Blue Rim</option>
+                                <option value="Soft Golden Hour Diffusion">Soft Golden Hour Natural Light</option>
+                                <option value="Cyberpunk Neon High-Contrast">Cyberpunk Neon High-Contrast</option>
+                                <option value="Dark Academic Rembrandt">Dark Academic Rembrandt</option>
+                                <option value="Bright Tech Minimalist Clean">Bright Tech Minimalist Clean</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ai_voiceover_style" class="form-label fw-bold">Voiceover Voice Tone:</label>
+                            <select class="form-select" id="ai_voiceover_style" name="ai_voiceover_style">
+                                <option value="Deep, authoritative, informative documentary" selected>Deep, authoritative documentary</option>
+                                <option value="Fast-paced high-energy creator hook">Fast-paced high-energy creator hook</option>
+                                <option value="Calm, reflective, scientific analysis">Calm, reflective, scientific analysis</option>
+                                <option value="Conversational podcast co-host style">Conversational podcast co-host style</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="gen_insta_link" class="form-label fw-bold">Inspiration YouTube Video or Channel Link (Optional):</label>
+                        <input type="url" class="form-control" id="gen_insta_link" name="insta_link" 
+                               placeholder="https://www.youtube.com/watch?v=... or https://youtube.com/@channel" 
+                               value="<%= (generated_data && generated_data.original_insta_link) ? generated_data.original_insta_link : '' %>">
+                        <small class="text-muted">If provided, Gemini extracts key timestamps or contextual ideas from this video.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="gen_hashtags" class="form-label fw-bold">Core YouTube Tags / Hashtags:</label>
+                        <input type="text" class="form-control" id="gen_hashtags" name="hashtags" 
+                               placeholder="#shorts, #technology, #science, #viral"
+                               value="<%= generated_data && !curation_setup_active ? generated_data.original_hashtags : '' %>">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="gen_ai_target_account_id" class="form-label fw-bold">Assign to YouTube Channel:</label>
+                        <select class="form-select" id="gen_ai_target_account_id" name="selected_account_id_for_theme" required>
+                            <% (available_accounts || []).forEach(function(acc) { %>
+                            <option value="<%= acc.id %>"><%= acc.channel_title || acc.username %> (@<%= acc.username %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="generate_content_button" class="btn btn-yt-red px-4 py-2 fw-bold">
+                            <i class="bi bi-sparkles me-1"></i> Initialize Theme &amp; Generate Content
+                        </button>
+                        <a href="/themes" class="btn btn-outline-secondary py-2">Cancel</a>
+                    </div>
+                </form>
+
+                <% if (generated_data && !curation_setup_active) { %>
+                    <hr class="my-5">
+                    <h4 class="fw-bold text-dark"><i class="bi bi-check-circle text-success me-2"></i>Generated Theme Review</h4>
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <h5 class="fw-bold text-dark"><%= generated_data.caption ? generated_data.caption.slice(0, 80) : 'Generated YouTube Hook' %></h5>
+                        <p class="text-muted mb-2" style="white-space: pre-wrap;"><%= generated_data.caption %></p>
+                        <div class="badge bg-secondary mb-2"><%= generated_data.hashtags %></div>
+                    </div>
+                    <form method="POST" action="/generate">
+                        <input type="hidden" name="form_mode" value="generate_ai_visual_approval">
+                        <input type="hidden" name="selected_account_id_for_theme" value="<%= available_accounts && available_accounts[0] ? available_accounts[0].id : 1 %>">
+                        <button type="submit" name="approve_and_save_button" class="btn btn-success fw-bold px-4">
+                            <i class="bi bi-check2-circle me-1"></i> Save &amp; Activate YouTube Pipeline
+                        </button>
+                    </form>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="yt-card p-4 mb-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle text-danger me-2"></i>Theme Strategy Flexibility</h6>
+                <p class="small text-muted mb-2">You are in complete control of each theme's operational pipeline:</p>
+                <ul class="small text-muted ps-3 mb-3">
+                    <li class="mb-1"><strong>Shorts Clips Mode:</strong> Perfect for podcasts, interviews, and long tutorials.</li>
+                    <li class="mb-1"><strong>AI Video Mode:</strong> Perfect for faceless storytelling, science explainers, and dramatic shorts.</li>
+                    <li><strong>Hot-swappable anytime:</strong> You can toggle between Shorts and AI Video modes at any time on the <a href="/themes">Themes Dashboard</a> with one click.</li>
+                </ul>
+            </div>
+            
+            <div class="yt-card p-4">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-search text-danger me-2"></i>Analyze Competitors</h6>
+                <p class="small text-muted mb-3">Want to study what's working on YouTube first? Input competitor channel links to find their highest-viewed videos.</p>
+                <a href="/analyze" class="btn btn-outline-danger btn-sm w-100 fw-bold">
+                    <i class="bi bi-arrow-right-circle me-1"></i> Open Video Analyzer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,6 @@
+{
+  "name": "YouTube Automation & Shorts Studio",
+  "description": "YouTube channel analyzer and automated content studio: extract viral Shorts clips or generate similar AI video concepts with matched lighting, voiceover, and scheduling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
