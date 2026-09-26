@@ -19,6 +19,20 @@
     </div>
 </div>
 
+<% if (typeof prefilled_short !== 'undefined' && prefilled_short) { %>
+<div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-3 p-3 mb-4 shadow-sm border-2 border-success" role="alert">
+    <div class="fs-2 text-success"><i class="bi bi-magic"></i></div>
+    <div class="flex-grow-1">
+        <h5 class="fw-bold mb-1">AI Video Concept &amp; Storyboard Loaded!</h5>
+        <p class="mb-0 text-dark small">
+            Loaded <strong><%= (prefilled_short.scenes || []).length %> scenes</strong> from video analysis: <em>"<%= prefilled_short.title %>"</em>. 
+            All generation prompts, animations, and voiceover scripts are synchronized. Click <strong>Generate &amp; Render</strong> or play the preview canvas below!
+        </p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<% } %>
+
 <div class="row g-4">
     <!-- LEFT PANEL: Creation Controls & AI Generator -->
     <div class="col-lg-5">
@@ -236,7 +250,7 @@
 <script src="/js/shorts-player.js"></script>
 
 <script>
-let currentVideoData = {
+let currentVideoData = <%- (typeof prefilled_short !== 'undefined' && prefilled_short) ? JSON.stringify(prefilled_short) : 'null' %> || {
     title: "Pip The Brave Firefly Who Lost His Light",
     theme: "The Brave Little Firefly Who Lost His Light",
     channel_handle: "@tiinywondertales",
@@ -322,7 +336,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    onChannelChange();
+    <% if (typeof prefilled_short !== 'undefined' && prefilled_short) { %>
+        // Prefilled from Video Analysis Studio!
+        if (currentVideoData.channel_handle) {
+            const chVal = currentVideoData.channel_handle.replace('@', '');
+            const targetSelect = document.getElementById('targetChannelSelect');
+            if (targetSelect) targetSelect.value = chVal;
+        }
+        if (currentVideoData.visual_style) {
+            const vSelect = document.getElementById('visualStyleSelect');
+            if (vSelect) vSelect.value = currentVideoData.visual_style;
+        }
+        if (currentVideoData.voice_style) {
+            const voiceSelect = document.getElementById('voiceStyleSelect');
+            if (voiceSelect) voiceSelect.value = currentVideoData.voice_style;
+        }
+        if (currentVideoData.duration_seconds) {
+            const dSelect = document.getElementById('durationSelect');
+            if (dSelect) dSelect.value = currentVideoData.duration_seconds;
+        }
+        document.getElementById('topicInput').value = currentVideoData.title;
+        renderPresets(document.getElementById('targetChannelSelect').value);
+    <% } else { %>
+        onChannelChange();
+    <% } %>
+
     loadCurrentVideoIntoUI();
 });
 

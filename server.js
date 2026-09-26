@@ -526,7 +526,7 @@ async function generateRealAiSpeech({ text, voiceName = 'Kore', stylePrompt = ''
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: 'gemini-3.1-flash-tts-preview',
+        model: 'gemini-3.8-flash-lite-tts',
         contents: [{ parts: [{ text: directedText }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -1392,7 +1392,7 @@ function getFallbackChannelData(query) {
       niche_summary: 'AI animated bedtime stories, vibrant moral adventures, and sensory learning for toddlers and young kids.',
       top_videos: [
         {
-          id: 'kids_vid_01',
+          id: '60ItHLz5WEA',
           title: 'The Brave Little Firefly Who Lost His Light ✨ Bedtime Story',
           duration: '3:45',
           views: '48.2K views',
@@ -1401,7 +1401,7 @@ function getFallbackChannelData(query) {
           thumbnail_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
         },
         {
-          id: 'kids_vid_02',
+          id: 'fNk_zzaMoSs',
           title: 'Barnaby Bunny & The Whispering Rainbow Cloud 🌈',
           duration: '4:12',
           views: '32.1K views',
@@ -1410,7 +1410,7 @@ function getFallbackChannelData(query) {
           thumbnail_url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
         },
         {
-          id: 'kids_vid_03',
+          id: '6n3pFFPSlW4',
           title: 'The Little Robot Who Learned To Dream 🤖🌙',
           duration: '3:15',
           views: '26.8K views',
@@ -1431,7 +1431,7 @@ function getFallbackChannelData(query) {
       niche_summary: 'Bite-sized viral comedy skits, relatable daily situations, street jokes, and satisfying short-form clips.',
       top_videos: [
         {
-          id: 'comedy_vid_01',
+          id: '3JZ_D3ELwOQ',
           title: 'When you accidentally agree to plans 3 weeks in advance 😂',
           duration: '0:45',
           views: '280.5K views',
@@ -1440,7 +1440,7 @@ function getFallbackChannelData(query) {
           thumbnail_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
         },
         {
-          id: 'comedy_vid_02',
+          id: 'kffacxfA7G4',
           title: 'Why cats stare at empty walls at 3 AM 🐱',
           duration: '0:38',
           views: '194.2K views',
@@ -1449,7 +1449,7 @@ function getFallbackChannelData(query) {
           thumbnail_url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=80',
         },
         {
-          id: 'comedy_vid_03',
+          id: 'tO01J-M3g0U',
           title: 'Things that make 100% sense until you say them out loud 💀',
           duration: '0:52',
           views: '142.7K views',
@@ -1469,7 +1469,7 @@ function getFallbackChannelData(query) {
     niche_summary: `Signature educational, science, and viral breakdowns exploring ${clean}.`,
     top_videos: [
       {
-        id: 'top_vid_01',
+        id: 'gT8eU8qXbZ0',
         title: `The Science of Focus & Peak Attention Protocol`,
         duration: '14:20',
         views: '1.2M views',
@@ -1478,7 +1478,7 @@ function getFallbackChannelData(query) {
         thumbnail_url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80',
       },
       {
-        id: 'top_vid_02',
+        id: 'fNk_zzaMoSs',
         title: `The Unexpected Paradox of High Achievers`,
         duration: '11:15',
         views: '840K views',
@@ -1487,7 +1487,7 @@ function getFallbackChannelData(query) {
         thumbnail_url: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=80',
       },
       {
-        id: 'top_vid_03',
+        id: '4_ny_G_Hw4g',
         title: `How Sleep Architecture Shapes Memory Consolidation`,
         duration: '18:40',
         views: '620K views',
