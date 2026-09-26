@@ -1042,9 +1042,11 @@ app.get('/all_posts', (req, res) => {
 
 // Real Video Studio Interface
 app.get('/create-short', (req, res) => {
+  const prefilledShort = req.session.prefilled_short || null;
   res.render('create_short', {
     title: 'Real AI Shorts & Video Studio',
     accounts: accounts,
+    prefilled_short: prefilledShort,
   });
 });
 
@@ -1656,11 +1658,128 @@ function formatYouTubeAlgorithmDescription(hook, synopsis, chapters, pinnedComme
   return `${hook}\n\n${synopsis}\n\n${chapters}\n\n${pinnedComment}\n\n${tags}`;
 }
 
-function buildViralClipsAndAiConcept(video, channelTitle) {
+async function buildViralClipsAndAiConcept(video, channelTitle) {
   const isKids = ((video?.title || '') + ' ' + (channelTitle || '')).toLowerCase().match(/kid|wonder|tale|story|bedtime|nursery|pip|pixel/);
   const isComedy = ((video?.title || '') + ' ' + (channelTitle || '')).toLowerCase().match(/short|daily|comedy|joke|funny|laugh|vlog|relatable/);
+  const safeTitle = (video && video.title ? video.title.slice(0, 45) : 'Topic');
+  const videoId = video?.id || '';
 
+  // 1. Try real-time Gemini AI Deep Video Analysis
+  const ai = getGeminiClient();
+  if (ai && video && video.title) {
+    try {
+      const prompt = `You are an elite YouTube algorithm strategist, viral retention scientist, and animation director.
+Analyze this YouTube video:
+Title: "${video.title}"
+Channel: "${channelTitle || 'YouTube Creator'}"
+Duration: "${video.duration || '5:00'}"
+Views: "${video.views || 'Viral'}"
+Description / Summary: "${video.summary || video.description || ''}"
+Video ID: "${videoId}"
+
+Perform two deep operations:
+
+1. MOST-VIEWED SECONDS & BEST SHORTS EXTRACTION (Original Audio & Video):
+Extract 3 to 4 viral Shorts highlights targeting the MOST-VIEWED SECONDS (highest retention peaks, replay spikes, dopamine hooks) of this video, preserving the original video and audio context.
+Each clip MUST include:
+- "title": High-CTR Shorts hook title with emoji (under 60 chars)
+- "start_seconds": Number (starting second in the video where the hook begins, e.g. 15)
+- "end_seconds": Number (ending second, between 25 and 45 seconds after start)
+- "timestamp": String in "MM:SS - MM:SS" format (e.g. "00:15 - 00:48")
+- "duration_seconds": Number of seconds (25-45)
+- "viral_score": Integer between 90 and 99
+- "retention_metric": e.g. "Most Replayed Spike (Top 1.5% Peak Engagement)" or "Retention Peak (94% Retention Spike)"
+- "why_most_viewed": Detailed explanation of why viewers rewind and re-watch this exact segment (rapid visual contrast, surprising punchline, emotional revelation)
+- "transcript_snippet": The exact spoken dialogue or audio in this clip
+- "description": Complete YouTube algorithm description with chapters, pinned comment, and hashtags
+
+2. COMPLETE SCENE-BY-SCENE BREAKDOWN & AI RECREATION PROMPTS:
+Deconstruct this video into 4 to 6 chronological scenes. For each scene provide:
+- "scene_number": Integer (1, 2, 3, etc.)
+- "timecode": String (e.g. "00:00 - 00:07")
+- "scene_title": Title of scene (e.g. "Curiosity Pattern Interrupt Hook")
+- "original_scene_analysis": Detailed analysis of what is shown in the original video (visual composition, camera angle, subject, lighting, mood, audio pacing)
+- "ai_generation_prompt": A complete, ready-to-use prompt for generative video/image AI (Midjourney, Veo 2, or Imagen 3) to generate similar scenes and animations in the new video. Include art style, 9:16 vertical ratio, lighting (e.g. cinematic Rembrandt, bioluminescent glow, or comic studio), textures, and subject details
+- "animation_direction": Motion instructions (e.g. "Slow cinematic push-in on subject's face, floating glowing embers, gentle camera shake on impact")
+- "voiceover_script": Complete voiceover script written specifically for this scene to match or replicate the narrative impact and rhythm of the original video
+- "voice_cadence_direction": Emotional tone and delivery notes (e.g. "Warm, soothing bedtime whisper at 120 wpm" or "Punchy, fast-paced sarcastic comedic cadence at 170 wpm")
+- "sound_effect": Recommended SFX (e.g. "sparkle", "whoosh", "chime", "bass_drop")
+- "visual_type": "bioluminescent_forest" or "comic_pop_studio" or "cinematic_documentary"
+
+Also provide overall concept metadata:
+- "title": Title for the new AI remake video
+- "lighting_style": Unified lighting & visual atmosphere notes
+- "voiceover_style": Unified vocal cadence and voice actor instructions
+- "script": Full continuous voiceover script
+- "tags": Relevant YouTube hashtags
+
+Format your response strictly as valid JSON matching this schema:
+{
+  "clips": [
+    {
+      "selected": true,
+      "title": "...",
+      "start_seconds": 15,
+      "end_seconds": 48,
+      "timestamp": "00:15 - 00:48",
+      "duration_seconds": 33,
+      "viral_score": 96,
+      "retention_metric": "Most Replayed Spike (Top 1.5% Peak)",
+      "why_most_viewed": "...",
+      "transcript_snippet": "...",
+      "description": "..."
+    }
+  ],
+  "ai_concept": {
+    "title": "...",
+    "lighting_style": "...",
+    "voiceover_style": "...",
+    "script": "...",
+    "tags": "...",
+    "scenes": [
+      {
+        "scene_number": 1,
+        "timecode": "00:00 - 00:07",
+        "scene_title": "...",
+        "original_scene_analysis": "...",
+        "ai_generation_prompt": "...",
+        "animation_direction": "...",
+        "voiceover_script": "...",
+        "voice_cadence_direction": "...",
+        "sound_effect": "...",
+        "visual_type": "..."
+      }
+    ]
+  }
+}
+Return ONLY JSON. No markdown ticks, no commentary.`;
+
+      const response = await callGeminiWithRetry(() =>
+        ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+        })
+      );
+
+      let text = response.text || '';
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(text);
+      if (parsed && Array.isArray(parsed.clips) && parsed.clips.length > 0 && parsed.ai_concept) {
+        parsed.clips.forEach(clip => {
+          clip.media_preview_filename = clip.media_preview_filename || 'sample_workspace.svg';
+          clip.video_id = videoId;
+        });
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Gemini 3.8 deep scene analysis fallback:', e.message);
+    }
+  }
+
+  // Fallback with complete scene-by-scene breakdown and retention peak clips
   let clips = [];
+  let aiConcept = null;
+
   if (isKids) {
     clips = [
       {
@@ -1669,7 +1788,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'And just when Pip thought all hope was lost, a tiny sparkle appeared!',
         duration_seconds: 35,
+        start_seconds: 15,
+        end_seconds: 50,
         timestamp: '00:15 - 00:50',
+        video_id: videoId,
+        retention_metric: 'Most Replayed Spike (Top 1.2% Peak Retention)',
+        why_most_viewed: 'Dramatic emotional turning point with magical fairy-glow color bloom that triggers high replay loops among children.',
         title: 'The Magic Sparkle in the Whispering Woods ✨',
         hook_reason: 'Emotional turning point with high curiosity hook and vibrant fairy-glow animation peak.',
         description: formatYouTubeAlgorithmDescription(
@@ -1686,7 +1810,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'Barnaby Bunny took a deep breath and whispered: Thank you Pip!',
         duration_seconds: 40,
+        start_seconds: 80,
+        end_seconds: 120,
         timestamp: '01:20 - 02:00',
+        video_id: videoId,
+        retention_metric: 'Peak Emotional Engagement (95% Completion)',
+        why_most_viewed: 'Heartwarming friendship interaction between Pip and Barnaby with cute dialogue and calming bedtime soundscape.',
         title: 'Barnaby Bunny learns how to be brave 🐰',
         hook_reason: 'Adorable character interaction with cute dialogue snippet that drives high replay loops.',
         description: formatYouTubeAlgorithmDescription(
@@ -1703,7 +1832,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'Remember little explorer: your true light shines from the inside.',
         duration_seconds: 30,
+        start_seconds: 165,
+        end_seconds: 195,
         timestamp: '02:45 - 03:15',
+        video_id: videoId,
+        retention_metric: 'Bedtime Calming Peak (92% Rewatch)',
+        why_most_viewed: 'Lullaby cadence moral conclusion with soothing ambient nature tones designed to settle sensory overload.',
         title: 'A bedtime moral that every child should hear 🌙',
         hook_reason: 'Satisfying moral conclusion with soothing lullaby audio cadence.',
         description: formatYouTubeAlgorithmDescription(
@@ -1720,7 +1854,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'Can you spot the hidden fireflies in the tree? Count with me: 1, 2, 3!',
         duration_seconds: 32,
+        start_seconds: 220,
+        end_seconds: 252,
         timestamp: '03:40 - 04:12',
+        video_id: videoId,
+        retention_metric: 'Interactive Replay Loop (Top Comment Trigger)',
+        why_most_viewed: 'Interactive counting element prompting parents and children to count aloud, resulting in multiple rewinds.',
         title: 'Can you count all the glowing stars with Pip? ⭐',
         hook_reason: 'Interactive counting element prompting comments and parent engagement.',
         description: formatYouTubeAlgorithmDescription(
@@ -1732,6 +1871,64 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         ),
       },
     ];
+
+    aiConcept = {
+      title: `The Enchanted Forest of Whispering Glow`,
+      lighting_style: 'Warm bioluminescent fairy-tale glow, soft pastel twilight highlights, diffuse magical radiance with dreamy depth-of-field.',
+      voiceover_style: 'Soothing, warm, bedtime story narrator voice with gentle pacing (125 wpm) and playful character inflections.',
+      script: `[HOOK 00:00-00:06]: Deep inside the Whispering Woods, a tiny glowing lantern lit up the ancient oak tree...\n[SCENE 1 00:06-00:18]: Pip the little firefly met Barnaby the bunny, who had never seen the night sky before.\n[SCENE 2 00:18-00:32]: "Do not be afraid of the dark," whispered Pip. "Because the dark is where the stars shine brightest."\n[OUTRO 00:32-00:45]: Sweet dreams little adventurers. Remember to let your own inner kindness glow bright tonight. Subscribe to TinyWonderTales!`,
+      tags: '#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #animation',
+      scenes: [
+        {
+          scene_number: 1,
+          timecode: '00:00 - 00:08',
+          scene_title: 'Twilight Forest Hook',
+          original_scene_analysis: 'Opens with mysterious dark forest foliage illuminated by a tiny dancing golden orb, setting an intimate fairytale bedtime tone.',
+          ai_generation_prompt: 'Cinematic 3D animation, enchanted twilight forest with giant bioluminescent mushrooms and glowing mossy trees, Pip the adorable glowing firefly with big curious eyes resting on a dewy leaf, warm amber fairy dust particles, dreamy depth of field, 9:16 vertical aspect ratio, ultra-detailed textures, Pixar style lighting.',
+          animation_direction: 'Slow gentle push-in towards Pip, soft breathing idle animation, golden particles floating upward with depth blur.',
+          voiceover_script: 'Deep inside the Whispering Woods, when all the forest animals curl up to sleep, a tiny lantern begins to shine.',
+          voice_cadence_direction: 'Whispered, warm bedtime cadence at 115 wpm, gentle maternal cadence.',
+          sound_effect: 'chime',
+          visual_type: 'bioluminescent_forest'
+        },
+        {
+          scene_number: 2,
+          timecode: '00:08 - 00:18',
+          scene_title: 'Encounter with Barnaby Bunny',
+          original_scene_analysis: 'Character introduction where a small lost bunny is shivering in the shadows, introducing an emotional problem for the viewer to care about.',
+          ai_generation_prompt: 'Cute fluffy baby bunny with soft white fur and floppy ears hiding under a giant fern leaf, looking nervous in the blue moonlight, Pip the friendly glowing firefly floating down to illuminate his face, warm golden light meeting cool night shadows, storybook illustration 3D render, 9:16 vertical.',
+          animation_direction: 'Horizontal tracking pan from shadows into Pip\'s warm glow, Barnaby\'s ears perking up as his eyes reflect the golden light.',
+          voiceover_script: 'Barnaby the little bunny was lost in the thicket, trembling because he had never seen the night sky before.',
+          voice_cadence_direction: 'Soft empathetic narration with gentle pause before character reassurance.',
+          sound_effect: 'whoosh',
+          visual_type: 'bioluminescent_forest'
+        },
+        {
+          scene_number: 3,
+          timecode: '00:18 - 00:30',
+          scene_title: 'The Brave Sparkle Climax',
+          original_scene_analysis: 'Emotional climax where friendship sparks a radiant burst of courage and illumination across the entire scene.',
+          ai_generation_prompt: 'Pip the firefly glowing with immense warm golden radiance, lighting up the entire forest canopy, Barnaby smiling joyfully, glowing sparkles showering around them, starry night sky visible through treetops, vibrant fantasy art, 9:16 vertical.',
+          animation_direction: 'Radial pulse expansion from Pip\'s abdomen, dynamic lighting sweep illuminating the forest background.',
+          voiceover_script: 'Do not be afraid of the dark, whispered Pip. For the dark is simply where our true light shines the brightest!',
+          voice_cadence_direction: 'Inspiring, joyful, soothing tone with heartfelt warmth.',
+          sound_effect: 'sparkle',
+          visual_type: 'bioluminescent_forest'
+        },
+        {
+          scene_number: 4,
+          timecode: '00:30 - 00:40',
+          scene_title: 'Sweet Dreams Moral Resolution',
+          original_scene_analysis: 'Peaceful resolution showing the friends safe and resting under the stars, sending viewers into relaxation.',
+          ai_generation_prompt: 'Barnaby bunny peacefully curled up asleep in a cozy hollow under ancient oak tree, Pip resting like a glowing nightlight on a twig above, crescent moon in purple sky, peaceful sleepy atmosphere, 9:16 vertical format.',
+          animation_direction: 'Gentle slow pull-back, stars twinkling softly in the purple velvet sky, slow fading light.',
+          voiceover_script: 'Close your eyes now, little adventurer. May your dreams be filled with wonder, and your heart with light. Goodnight.',
+          voice_cadence_direction: 'Ultra-quiet lullaby whisper, trailing off peacefully.',
+          sound_effect: 'chime',
+          visual_type: 'bioluminescent_forest'
+        }
+      ]
+    };
   } else if (isComedy) {
     clips = [
       {
@@ -1740,7 +1937,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'Me: I am going to be super productive today. Also me 5 minutes later:',
         duration_seconds: 28,
+        start_seconds: 8,
+        end_seconds: 36,
         timestamp: '00:08 - 00:36',
+        video_id: videoId,
+        retention_metric: 'Instant Replay Spike (Top 0.8% Viral Peak)',
+        why_most_viewed: 'Instant relatable 3-second visual contrast with unexpected comedic defeat that triggers continuous scroll replays.',
         title: 'The exact moment your productivity leaves your body 😂',
         hook_reason: 'Instant 3-second relatable visual pattern interrupt with universal comedic appeal.',
         description: formatYouTubeAlgorithmDescription(
@@ -1757,7 +1959,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'When your friend says they are 5 minutes away but haven’t even left bed:',
         duration_seconds: 34,
+        start_seconds: 65,
+        end_seconds: 99,
         timestamp: '01:05 - 01:39',
+        video_id: videoId,
+        retention_metric: 'High Social Share Spike (Top 2% Tagged Friends)',
+        why_most_viewed: 'Hilarious split-screen comparison that directly mirrors real-life texting habits, driving massive friend-tagging in comments.',
         title: 'That one friend who operates on imaginary time zones ⏰',
         hook_reason: 'High shareability hook that drives users to tag friends in the comments.',
         description: formatYouTubeAlgorithmDescription(
@@ -1774,7 +1981,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'Nobody warned us that adulthood is just deciding what to eat every single day.',
         duration_seconds: 30,
+        start_seconds: 130,
+        end_seconds: 160,
         timestamp: '02:10 - 02:40',
+        video_id: videoId,
+        retention_metric: 'Consensus Replay Loop (93% Loop Rate)',
+        why_most_viewed: 'Universal existential crisis unpacked in rapid punchy edits that resonate with every adult demographic.',
         title: 'The biggest scam of becoming an adult 💀',
         hook_reason: 'Emotional consensus hook with punchy pacing that encourages continuous scrolling replays.',
         description: formatYouTubeAlgorithmDescription(
@@ -1791,7 +2003,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'My bank account watching me buy another iced coffee:',
         duration_seconds: 25,
+        start_seconds: 195,
+        end_seconds: 220,
         timestamp: '03:15 - 03:40',
+        video_id: videoId,
+        retention_metric: 'Trending Audio Sync Peak (Top 5% Sound Shares)',
+        why_most_viewed: 'Short snappy comedic timing tailored to audio rhythm, producing high engagement spikes in the first 5 seconds.',
         title: 'Financial decisions that make total sense in my head ☕',
         hook_reason: 'Short, snappy, self-deprecating humor optimized for audio trending sync.',
         description: formatYouTubeAlgorithmDescription(
@@ -1803,16 +2020,78 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         ),
       },
     ];
+
+    aiConcept = {
+      title: `When Your Brain Thinks at 200 MPH at 3 AM`,
+      lighting_style: 'Punchy studio ring lighting with warm tungsten room accent, crisp high-contrast vertical framing.',
+      voiceover_style: 'Fast-paced, sarcastic, comedic delivery at 170 wpm with deadpan timing micro-pauses.',
+      script: `[HOOK 00:00-00:05]: My brain all day: 404 error, file not found.\n[SCENE 1 00:05-00:15]: My brain at 3:14 AM: Hey, remember that embarrassing thing you said to your 4th grade teacher in 2012?\n[SCENE 2 00:15-00:25]: Also, could penguins theoretically build a functional economy based on fish exchange?\n[CTA 00:25-00:35]: If your brain refuses to sleep like mine, hit subscribe and join the insomnia club on The Daily Shorts!`,
+      tags: '#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts',
+      scenes: [
+        {
+          scene_number: 1,
+          timecode: '00:00 - 00:07',
+          scene_title: 'The Daytime Brain Freeze Hook',
+          original_scene_analysis: 'High contrast visual setup of a person staring blankly at a laptop screen with empty thought bubble, capturing the universal feeling of cognitive fog.',
+          ai_generation_prompt: 'Comic pop art style 3D illustration, relatable millennial character sitting at sleek modern desk with blank expression, spinning blue loading icon above their head, vibrant studio lighting, saturated neon cyan and magenta accents, sharp 9:16 vertical framing, clean typography sticker saying "SYSTEM OFFLINE".',
+          animation_direction: 'Rapid comedic zoom-in on wide empty eyes, rotating glitch effects on the loading icon.',
+          voiceover_script: 'My brain during normal work hours: complete 404 error. Zero thoughts behind these eyes.',
+          voice_cadence_direction: 'Deadpan, sarcastic, slow comedic delivery.',
+          sound_effect: 'whoosh',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 2,
+          timecode: '00:07 - 00:18',
+          scene_title: 'The 3:14 AM Cognitive Surge',
+          original_scene_analysis: 'Abrupt shift in lighting and energy: dark bedroom, bright glowing smartphone face, brain operating at superhuman hyperactive speed.',
+          ai_generation_prompt: 'Dark cozy bedroom illuminated by intense eerie blue glow of smartphone screen, character in bed with giant wide open eyes, electric lightning bolts of random thoughts sparking around their head, kinetic pop art comic style, hyper-detailed 9:16 vertical layout.',
+          animation_direction: 'Fast camera shake, rapid pop-in speech bubbles popping up like notifications.',
+          voiceover_script: 'My brain at literally 3:14 in the morning: Hey! Remember that awkward handshake you messed up in 2015?',
+          voice_cadence_direction: 'Fast-paced, high energy, caffeinated whisper.',
+          sound_effect: 'bass_drop',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 3,
+          timecode: '00:18 - 00:28',
+          scene_title: 'The Philosophical Debate',
+          original_scene_analysis: 'Escalation to absurd existential logic that completely prevents any possibility of sleeping.',
+          ai_generation_prompt: 'Cartoonish courtroom of tiny miniature characters inside a human head holding charts and arguing passionately over penguins and finance, bright colorful comic aesthetic, dynamic diagonal angles, 9:16 vertical composition.',
+          animation_direction: 'Spinning pie charts, dramatic side-to-side character whip-pans.',
+          voiceover_script: 'Also... if penguins decided to trade fish as currency, how fast would the fish economy collapse?!',
+          voice_cadence_direction: 'Frantic, urgent comedic climax with theatrical intensity.',
+          sound_effect: 'whoosh',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 4,
+          timecode: '00:28 - 00:35',
+          scene_title: 'The Insomnia Call-to-Action',
+          original_scene_analysis: 'Relatable defeat resolution inviting viewer camaraderie and subscription.',
+          ai_generation_prompt: 'Character staring directly at viewer with half-smile holding coffee mug labeled "Send Help", bold sticker graphics with YouTube subscribe button ringing, clean graphic layout, 9:16 vertical.',
+          animation_direction: 'Pulsing subscribe button, confetti pop effect.',
+          voiceover_script: 'If your brain runs marathons at 3 AM too, smash that subscribe button so we can be tired together!',
+          voice_cadence_direction: 'Friendly, punchy, charismatic call to action.',
+          sound_effect: 'sparkle',
+          visual_type: 'comic_pop_studio'
+        }
+      ]
+    };
   } else {
-    const safeTitle = (video && video.title ? video.title.slice(0, 35) : 'Topic');
     clips = [
       {
         selected: true,
         viral_score: 95,
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'Here is why 99% of people fail to master this single principle:',
-        duration_seconds: 42,
-        timestamp: '00:15 - 00:57',
+        duration_seconds: 35,
+        start_seconds: 15,
+        end_seconds: 50,
+        timestamp: '00:15 - 00:50',
+        video_id: videoId,
+        retention_metric: 'Peak Hook Spike (Top 1.4% Rewatch Velocity)',
+        why_most_viewed: 'Contrarian question hook challenging common wisdom within first 3 seconds, leading viewers to re-watch to catch the subtle premise.',
         title: `The 60-Second Secret Behind ${safeTitle} 🔥`,
         hook_reason: 'High retention counter-intuitive question hook within first 3 seconds.',
         description: formatYouTubeAlgorithmDescription(
@@ -1829,7 +2108,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'When researchers tested this hypothesis, the results stunned everyone.',
         duration_seconds: 38,
+        start_seconds: 105,
+        end_seconds: 143,
         timestamp: '01:45 - 02:23',
+        video_id: videoId,
+        retention_metric: 'Data Revelation Spike (93% Retention)',
+        why_most_viewed: 'Surprise outcome revelation backed by empirical charts that causes viewers to pause and inspect the graphic proof.',
         title: `What Science Proves About ${safeTitle} 🧠`,
         hook_reason: 'Surprise outcome revelation backed by research authority.',
         description: formatYouTubeAlgorithmDescription(
@@ -1846,7 +2130,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_workspace.svg',
         transcript_snippet: 'Stop doing this immediately if you want consistent momentum:',
         duration_seconds: 35,
+        start_seconds: 192,
+        end_seconds: 227,
         timestamp: '03:12 - 03:47',
+        video_id: videoId,
+        retention_metric: 'Loss-Aversion Warning Peak (Top 2% Rewinds)',
+        why_most_viewed: 'Direct diagnostic of the most common friction point that causes immediate saves and bookmarks.',
         title: `The 1 Mistake You Are Probably Making Daily ⚠️`,
         hook_reason: 'Loss-aversion warning trigger that stops user scroll immediately.',
         description: formatYouTubeAlgorithmDescription(
@@ -1863,7 +2152,12 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         media_preview_filename: 'sample_sunset.svg',
         transcript_snippet: 'The 3-step action checklist you can apply in under 5 minutes:',
         duration_seconds: 30,
+        start_seconds: 270,
+        end_seconds: 300,
         timestamp: '04:30 - 05:00',
+        video_id: videoId,
+        retention_metric: 'Actionable Framework Peak (Highest Bookmark Rate)',
+        why_most_viewed: 'Actionable 3-step micro protocol designed for immediate execution, resulting in high saves to playlist.',
         title: `Quick 3-Step Action Protocol ⚡`,
         hook_reason: 'Actionable takeaway format that drives bookmarks and saves.',
         description: formatYouTubeAlgorithmDescription(
@@ -1875,33 +2169,63 @@ function buildViralClipsAndAiConcept(video, channelTitle) {
         ),
       },
     ];
-  }
 
-  let aiConcept = null;
-  if (isKids) {
-    aiConcept = {
-      title: `The Enchanted Forest of Whispering Glow`,
-      lighting_style: 'Warm bioluminescent fairy-tale glow, soft pastel twilight highlights, diffuse magical radiance with dreamy depth-of-field.',
-      voiceover_style: 'Soothing, warm, bedtime story narrator voice with gentle pacing (125 wpm) and playful character inflections.',
-      script: `[HOOK 00:00-00:06]: Deep inside the Whispering Woods, a tiny glowing lantern lit up the ancient oak tree...\n[SCENE 1 00:06-00:18]: Pip the little firefly met Barnaby the bunny, who had never seen the night sky before.\n[SCENE 2 00:18-00:32]: "Do not be afraid of the dark," whispered Pip. "Because the dark is where the stars shine brightest."\n[OUTRO 00:32-00:45]: Sweet dreams little adventurers. Remember to let your own inner kindness glow bright tonight. Subscribe to TinyWonderTales!`,
-      tags: '#shorts, #tiinywondertales, #kidsstories, #bedtimestory, #animation',
-    };
-  } else if (isComedy) {
-    aiConcept = {
-      title: `When Your Brain Thinks at 200 MPH at 3 AM`,
-      lighting_style: 'Punchy studio ring lighting with warm tungsten room accent, crisp high-contrast vertical framing.',
-      voiceover_style: 'Fast-paced, sarcastic, comedic delivery at 170 wpm with deadpan timing micro-pauses.',
-      script: `[HOOK 00:00-00:05]: My brain all day: 404 error, file not found.\n[SCENE 1 00:05-00:15]: My brain at 3:14 AM: Hey, remember that embarrassing thing you said to your 4th grade teacher in 2012?\n[SCENE 2 00:15-00:25]: Also, could penguins theoretically build a functional economy based on fish exchange?\n[CTA 00:25-00:35]: If your brain refuses to sleep like mine, hit subscribe and join the insomnia club on The Daily Shorts!`,
-      tags: '#shorts, #thedailyEshorts, #comedy, #relatable, #viralshorts',
-    };
-  } else {
-    const safeTitle = (video && video.title ? video.title.slice(0, 35) : 'Topic');
     aiConcept = {
       title: `Re-engineering ${safeTitle}: The Untold Protocol`,
       lighting_style: 'Dramatic cinematic Rembrandt key lighting, dark moody teal backdrop, 3200K rim edge backlight.',
       voiceover_style: 'Deep, authoritative, documentary cadence at 155 wpm with strategic emphasis micro-pauses.',
       script: `[HOOK 00:00-00:05]: Most people misunderstand the core mechanism of ${safeTitle}.\n[SCENE 1 00:05-00:18]: When you examine the empirical data, an unexpected pattern emerges.\n[SCENE 2 00:18-00:35]: Top researchers discovered that applying this single structural shift changes everything.\n[CTA 00:35-00:45]: Save this video, share with someone who needs this breakthrough, and subscribe for more deep dives.`,
       tags: '#shorts, #deepdive, #education, #productivity, #viral',
+      scenes: [
+        {
+          scene_number: 1,
+          timecode: '00:00 - 00:07',
+          scene_title: 'Paradox Hook & Disruption',
+          original_scene_analysis: 'Dramatic macro shot opening with high visual tension and contrasting text overlay challenging conventional wisdom.',
+          ai_generation_prompt: `Cinematic high-contrast documentary shot, extreme close-up of sophisticated optical prism splitting dark teal light into golden laser rays, sleek minimalist studio setting, dark moody aesthetic, shallow depth of field, anamorphic lens flare, 9:16 vertical ratio, 8k resolution.`,
+          animation_direction: 'Slow deliberate push-in with subtle anamorphic lens streak and floating micro-dust particles.',
+          voiceover_script: `Most people assume that ${safeTitle} comes down to sheer effort. But neuroscientists just revealed something completely different.`,
+          voice_cadence_direction: 'Authoritative, calm, deliberate documentary pacing at 145 wpm with dramatic pause before revelation.',
+          sound_effect: 'bass_drop',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 2,
+          timecode: '00:07 - 00:18',
+          scene_title: 'The Hidden Mechanism Breakdown',
+          original_scene_analysis: 'Sleek motion graphic transition demonstrating how the core process actually operates beneath the surface.',
+          ai_generation_prompt: 'Futuristic 3D holographic wireframe diagram showing complex interconnected nodes glowing in bioluminescent cyan and gold, dark glass background with soft reflections, high-tech interface aesthetic, 9:16 vertical.',
+          animation_direction: 'Smooth rotation of holographic nodes with pulses of light traveling along energy conduits.',
+          voiceover_script: 'When you track behavioral momentum in controlled environments, the data proves that small environmental cues trigger 80% of execution velocity.',
+          voice_cadence_direction: 'Clear, informative, steady pace with emphasis on behavioral momentum.',
+          sound_effect: 'whoosh',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 3,
+          timecode: '00:18 - 00:30',
+          scene_title: 'The Actionable Protocol',
+          original_scene_analysis: 'Clean numerical step-by-step breakdown designed to provide immediate clarity to the viewer.',
+          ai_generation_prompt: 'High-end Apple-style typography cards floating in 3D space, crisp white san-serif text on matte obsidian slabs, soft golden edge lighting, studio product photography aesthetic, 9:16 vertical format.',
+          animation_direction: 'Staggered vertical float-in of each rule card with soft haptic motion blur.',
+          voiceover_script: 'First: remove the starting friction. Second: anchor the habit to an existing reflex. Third: review your baseline daily.',
+          voice_cadence_direction: 'Structured, confident, crisp articulation for each numbered item.',
+          sound_effect: 'sparkle',
+          visual_type: 'comic_pop_studio'
+        },
+        {
+          scene_number: 4,
+          timecode: '00:30 - 00:40',
+          scene_title: 'Retention Summary & Community Hook',
+          original_scene_analysis: 'High retention ending card prompting immediate bookmarking and discussion in comments.',
+          ai_generation_prompt: 'Clean visual summary card with bookmark ribbon icon and subscribe bell badge glowing with warm rim light, elegant dark mode theme, 9:16 vertical.',
+          animation_direction: 'Gentle zoom out with pulsing bookmark icon animation.',
+          voiceover_script: 'Save this breakdown so you can reference the protocol this week, and subscribe for more deep dives!',
+          voice_cadence_direction: 'Engaging, direct call to action with warm professional composure.',
+          sound_effect: 'chime',
+          visual_type: 'comic_pop_studio'
+        }
+      ]
     };
   }
 
@@ -2012,7 +2336,7 @@ app.get('/analyze', async (req, res) => {
         const topVid = channelData.top_videos[0];
         req.session.selected_video = topVid;
         req.session.selected_video_channel = channelData.channel_title;
-        const { clips, aiConcept } = buildViralClipsAndAiConcept(topVid, channelData.channel_title);
+        const { clips, aiConcept } = await buildViralClipsAndAiConcept(topVid, channelData.channel_title);
         req.session.clips_data = clips;
         req.session.ai_concept = aiConcept;
       }
@@ -2184,7 +2508,7 @@ app.post('/analyze/fetch', async (req, res) => {
       req.session.selected_video = topVid;
       req.session.selected_video_channel = channelData.channel_title;
 
-      const { clips, aiConcept } = buildViralClipsAndAiConcept(topVid, channelData.channel_title);
+      const { clips, aiConcept } = await buildViralClipsAndAiConcept(topVid, channelData.channel_title);
       req.session.clips_data = clips;
       req.session.ai_concept = aiConcept;
     }
@@ -2198,7 +2522,7 @@ app.post('/analyze/fetch', async (req, res) => {
   res.redirect('/analyze#strategy-studio');
 });
 
-app.post('/analyze/select_video', (req, res) => {
+app.post('/analyze/select_video', async (req, res) => {
   try {
     const videoData = JSON.parse(req.body.video_data_json || '{}');
     const channelTitle = req.body.channel_title || 'YouTube Channel';
@@ -2206,17 +2530,108 @@ app.post('/analyze/select_video', (req, res) => {
     req.session.selected_video = videoData;
     req.session.selected_video_channel = channelTitle;
 
-    const { clips, aiConcept } = buildViralClipsAndAiConcept(videoData, channelTitle);
+    const { clips, aiConcept } = await buildViralClipsAndAiConcept(videoData, channelTitle);
     req.session.clips_data = clips;
     req.session.ai_concept = aiConcept;
 
-    req.flash('info', `Selected video: "${videoData.title}". Generation strategies updated.`);
+    req.flash('info', `Selected video: "${videoData.title}". AI Scene Breakdown and Viral Retention Peaks updated.`);
   } catch (err) {
     console.error('Error selecting video:', err);
     req.flash('warning', 'Could not select video.');
   }
 
   res.redirect('/analyze#strategy-studio');
+});
+
+// Deep Scene-by-Scene Re-Analysis Endpoint
+app.post('/api/analyze-video-deep', async (req, res) => {
+  try {
+    const videoData = req.body.video || req.session.selected_video;
+    const channelTitle = req.body.channel_title || req.session.selected_video_channel || 'YouTube Creator';
+
+    if (!videoData) {
+      return res.status(400).json({ success: false, error: 'No video selected for analysis.' });
+    }
+
+    const { clips, aiConcept } = await buildViralClipsAndAiConcept(videoData, channelTitle);
+    req.session.clips_data = clips;
+    req.session.ai_concept = aiConcept;
+
+    res.json({
+      success: true,
+      clips,
+      aiConcept,
+      message: 'Complete scene-by-scene prompts and viral retention clips generated successfully!'
+    });
+  } catch (err) {
+    console.error('Error in /api/analyze-video-deep:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Transfer AI Scene Breakdown directly into 9:16 Shorts Studio
+app.post('/analyze/transfer_to_studio', (req, res) => {
+  try {
+    const aiConcept = req.session.ai_concept || {};
+    const selectedVideo = req.session.selected_video || {};
+    const channelTitle = req.session.selected_video_channel || '';
+    
+    // Parse scenes from body or session
+    let scenes = [];
+    if (req.body.scenes_json) {
+      try {
+        scenes = JSON.parse(req.body.scenes_json);
+      } catch (e) {
+        scenes = aiConcept.scenes || [];
+      }
+    } else {
+      scenes = aiConcept.scenes || [];
+    }
+
+    const isKids = ((selectedVideo.title || '') + ' ' + channelTitle).toLowerCase().match(/kid|wonder|tale|story|bedtime|nursery|pip/);
+    const channelHandle = isKids ? '@tiinywondertales' : '@thedailyEshorts';
+    const visualStyle = isKids ? 'bioluminescent_forest' : 'comic_pop_studio';
+    const voiceStyle = isKids ? 'soothing_storyteller' : 'punchy_comedic';
+
+    let totalDuration = 0;
+    const formattedScenes = (scenes || []).map((sc, idx) => {
+      const sceneDur = 8;
+      const startSec = idx * sceneDur;
+      const endSec = startSec + sceneDur;
+      totalDuration = endSec;
+
+      return {
+        scene_number: idx + 1,
+        start_sec: startSec,
+        end_sec: endSec,
+        visual_type: visualStyle,
+        visual_prompt: sc.ai_generation_prompt || sc.scene_title || 'Cinematic vertical 9:16 aesthetic',
+        narration: sc.voiceover_script || 'Scene narration',
+        sound_effect: sc.sound_effect || (idx === 0 ? 'whoosh' : idx === 1 ? 'chime' : 'sparkle'),
+        camera: idx % 3 === 0 ? 'zoom_in' : idx % 3 === 1 ? 'pan_right' : 'pulse'
+      };
+    });
+
+    const prefilledVideo = {
+      title: req.body.video_title || aiConcept.title || `AI Remake: ${selectedVideo.title || 'Viral Short'}`,
+      description: `Remake and scene adaptation inspired by "${selectedVideo.title || 'Original'}".\n\n${aiConcept.script || ''}\n\n#shorts #ai #viral`,
+      hashtags: req.body.video_tags || aiConcept.tags || '#shorts #viral #recreation',
+      duration_seconds: totalDuration || 32,
+      viral_score: 97,
+      channel_handle: channelHandle,
+      visual_style: visualStyle,
+      voice_style: voiceStyle,
+      scenes: formattedScenes.length > 0 ? formattedScenes : undefined
+    };
+
+    req.session.prefilled_short = prefilledVideo;
+    req.flash('success', `Scene-by-scene script loaded into the 9:16 Shorts Studio! Ready to render with real AI speech.`);
+    res.redirect('/create-short');
+  } catch (err) {
+    console.error('Error transferring to studio:', err);
+    req.flash('danger', 'Failed to transfer scenes to studio.');
+    res.redirect('/analyze#strategy-studio');
+  }
 });
 
 app.post('/analyze/confirm_clips', (req, res) => {
