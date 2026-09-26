@@ -836,6 +836,7 @@ async function generateRealShortData({ topic, channelHandle = '@tiinywondertales
   const isKids = (channelHandle + ' ' + topic).toLowerCase().match(/kid|wonder|tale|story|bedtime|tiiny|bunny|pip|whisper|forest/);
   const targetChannel = isKids ? '@tiinywondertales' : '@thedailyE-shorts';
 
+  let shortData = null;
   const ai = getGeminiClient();
   if (ai) {
     try {
